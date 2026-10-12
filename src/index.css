@@ -1,0 +1,54 @@
+:root {
+  /* Paleta base */
+  --color-bg: #f6f3ff;
+  --color-surface: #ffffff;
+  --color-text: #1f1638;
+  --color-muted: #6b5f8a;
+  --color-primary: #7c3aed;
+  --color-primary-soft: #ede4ff;
+  --color-accent: #f472b6;
+
+  /* Colores por grupo de Lehninger (se usarán desde la Fase 1) */
+  --group-nonpolar: #f59e0b;
+  --group-aromatic: #a855f7;
+  --group-polar: #10b981;
+  --group-positive: #3b82f6;
+  --group-negative: #ef4444;
+
+  --radius: 18px;
+  --shadow: 0 8px 24px rgb(76 29 149 / 0.12);
+
+  font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 10% 0%, #e9ddff 0, transparent 40%),
+    radial-gradient(circle at 90% 100%, #ffe0f0 0, transparent 40%),
+    var(--color-bg);
+}
+
+button {
+  font: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
