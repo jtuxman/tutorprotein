@@ -194,10 +194,10 @@ Todos registran en el motor de progreso y respetan el estilo lúdico.
 5. Esqueletos con README: `src/data/`, `src/progress/`, `src/components/MolViewer/`.
 
 ### Pendiente
-- **Push**: falló por credenciales (el remoto `https://jtuxman@github.com/jtuxman/tutorprotein.git` pide contraseña; `gh` está autenticado como `jmanuel-arakion`). Los commits están solo en local.
-- **GitHub Pages**: en la configuración del repositorio, *Settings → Pages → Source* debe estar en **GitHub Actions** para que el workflow publique.
+- Nada de la Fase 0. Sitio publicado en https://jtuxman.github.io/tutorprotein/ (Pages con origen "GitHub Actions"; primer despliegue exitoso).
 
 ### Desviaciones y notas
 - La pestaña activa se guarda solo en el estado de React (sin enrutamiento ni hash), para no condicionar el diseño de "compartir vista por enlace" de fases posteriores.
 - Tokens de color por grupo de Lehninger definidos en `src/index.css` (`--group-*`), listos para la Fase 1.
 - El workflow usa Node 22 (localmente se probó con Node 24).
+- El push se hace con la cuenta `jtuxman` (`gh` con permiso `workflow`); los commits conservan como autor a `jmanuel-arakion`.
