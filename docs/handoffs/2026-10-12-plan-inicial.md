@@ -181,3 +181,23 @@ Todos registran en el motor de progreso y respetan el estilo lúdico.
 
 ---
 **Instrucción para Claude Code:** implementa **solo la Fase 0** en esta sesión. Al terminar, haz commit, push, añade la sección "Resultado" a este archivo y espera indicaciones antes de seguir.
+
+---
+
+## Resultado — Fase 0 (2026-10-12)
+
+### Hecho
+1. App creada con Vite 8 + React 19 + TypeScript 6. Dependencias instaladas: `3dmol` 2.5.5 y `smiles-drawer` 2.4.1 (aún sin usar).
+2. Layout con las **seis pestañas** (`src/tabs/tabs.ts` + `src/App.tsx`). Cada una muestra un panel "Próximamente" lúdico (ícono animado, burbujas con los colores de grupo, fase en que llega). En pantallas ≤ 720 px la barra pasa a ser una barra inferior fija con etiquetas cortas; la etiqueta completa queda para lectores de pantalla. Se respeta `prefers-reduced-motion`.
+3. `.github/workflows/deploy.yml`: en cada push a `main` corre `npm ci`, `npm test`, `npm run build` y publica `dist/` con `actions/deploy-pages`. `base: '/tutorprotein/'` en `vite.config.ts`.
+4. Vitest (jsdom + Testing Library): `src/App.test.tsx` comprueba que hay seis pestañas y que se puede cambiar de pestaña. `npm test` y `npm run build` pasan.
+5. Esqueletos con README: `src/data/`, `src/progress/`, `src/components/MolViewer/`.
+
+### Pendiente
+- **Push**: falló por credenciales (el remoto `https://jtuxman@github.com/jtuxman/tutorprotein.git` pide contraseña; `gh` está autenticado como `jmanuel-arakion`). Los commits están solo en local.
+- **GitHub Pages**: en la configuración del repositorio, *Settings → Pages → Source* debe estar en **GitHub Actions** para que el workflow publique.
+
+### Desviaciones y notas
+- La pestaña activa se guarda solo en el estado de React (sin enrutamiento ni hash), para no condicionar el diseño de "compartir vista por enlace" de fases posteriores.
+- Tokens de color por grupo de Lehninger definidos en `src/index.css` (`--group-*`), listos para la Fase 1.
+- El workflow usa Node 22 (localmente se probó con Node 24).
