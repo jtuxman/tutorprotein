@@ -37,7 +37,7 @@ El plan maestro está en `docs/handoffs/2026-10-12-plan-inicial.md`. Cada fase l
 - **Choques estéricos**: solapamiento ≥ 0.4 Å respecto a la suma de radios de van der Waals entre átomos no enlazados (convención MolProbity).
 - **Licencias de datos**: antes de incluir bibliotecas de rotámeros, contornos de Ramachandran o cualquier dataset externo, verifica que su licencia permita redistribuirlo y anótala en `docs/licencias.md`. No uses la biblioteca de Dunbrack.
 - **Contenido didáctico original**: los textos de recorridos, mnemotecnias y explicaciones se escriben desde cero; no copiar de Proteopedia, PDB-101 ni libros.
-- Estructuras 2D siempre en **forma neutra** (–NH2 / –COOH), no zwitteriónica.
+- Estructuras 2D y 3D siempre en **forma neutra** (–NH2 / –COOH, cadenas laterales sin carga), no zwitteriónica. Las formas cargadas solo aparecen donde se enseña la protonación (simulador de pH). Los SDF del CCD de Lys, Arg e His vienen protonados y se neutralizan al generarlos.
 - Estilo visual **atractivo y lúdico**: colores vivos por grupo, animaciones suaves, celebraciones al acertar, rachas e insignias. Sin sacrificar legibilidad de las estructuras.
 - El modelo de datos incluye `standard: boolean` para poder añadir después aminoácidos no estándar (selenocisteína, pirrolisina).
 
