@@ -21,6 +21,8 @@ describe('ClassificationTab', () => {
     expect(cards()).toHaveLength(20)
     const aromatic = screen.getByRole('region', { name: /Aromáticos/ })
     expect(within(aromatic).getAllByRole('listitem')).toHaveLength(3)
+    expect(within(aromatic).getByRole('heading', { name: '¿Por qué se llaman así?' })).toBeInTheDocument()
+    expect(within(aromatic).getByText(/no habla del olor/)).toBeInTheDocument()
     expect(screen.getByRole('region', { name: /Cargados negativamente/ })).toBeInTheDocument()
   })
 

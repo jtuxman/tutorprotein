@@ -94,6 +94,12 @@ export function ClassificationTab() {
                 />
               ))}
             </ul>
+            <div className="group-section__why">
+              <h4>¿Por qué se llaman así?</h4>
+              {info.explanation.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+            </div>
           </section>
         )
       })}

@@ -11,7 +11,7 @@ Los 20 aminoácidos estándar. Fuente de los valores numéricos: Lehninger, 8.ª
 | `AMINO_ACIDS: AminoAcid[]` | Los 20, ordenados por grupo de Lehninger. |
 | `AminoAcid` | `code3`, `code1`, `name`, `aliases`, `group`, `smiles` (neutro, isomérico), `molecularWeight` (Mr), `pKa { carboxyl, amino, sideChain? }`, `pI`, `hydropathy` (Kyte-Doolittle), `essentiality`, `codons` (ARN), `standard`, `note`, `ionizableGroups`. |
 | `IonizableGroup` | `kind`, `pKa`, `type` (`'acid'` o `'base'`) y `atoms` (nombres CCD entre los que se reparte la carga). Se generan a partir de `pKa`; no se escriben dos veces. |
-| `GROUPS`, `GROUP_ORDER` | Etiqueta, variable CSS de color y criterio de cada grupo de Lehninger. |
+| `GROUPS`, `GROUP_ORDER` | Etiqueta, variable CSS de color, criterio (`description`) y explicación de por qué se llama así (`explanation`, en párrafos) de cada grupo de Lehninger. |
 | `ESSENTIALITY_LABELS` | Texto de los tres estados: `essential`, `conditional`, `nonessential`. |
 | `HYDROPATHY_RANGE`, `BACKBONE_ATOMS` | Extremos de la escala (−4.5…+4.5) y átomos del esqueleto (N, CA, C, O, OXT). |
 | `ccdCode(aa)`, `findAminoAcid(code)` | Código CCD (`'ALA'`) y búsqueda por código de 1 o 3 letras. |

@@ -52,6 +52,8 @@ export interface GroupInfo {
   cssVar: string
   /** Criterio que reúne a los aminoácidos del grupo. */
   description: string
+  /** Por qué el grupo se llama así, en párrafos. Texto original. */
+  explanation: string[]
 }
 
 export const GROUP_ORDER: LehningerGroup[] = ['nonpolar', 'aromatic', 'polar', 'positive', 'negative']
@@ -62,30 +64,57 @@ export const GROUPS: Record<LehningerGroup, GroupInfo> = {
     cssVar: '--group-nonpolar',
     description:
       'Cadenas laterales hechas casi solo de carbono e hidrógeno: no forman puentes de hidrógeno y suelen esconderse del agua en el interior de las proteínas.',
+    explanation: [
+      '«No polar» describe cómo se reparten los electrones. El carbono y el hidrógeno los atraen casi con la misma fuerza, así que en una cadena hecha de enlaces C–C y C–H no quedan zonas con carga parcial. Sin esas cargas la cadena no puede formar puentes de hidrógeno con el agua, y el agua la empuja a juntarse con otras cadenas parecidas: es el efecto hidrofóbico que mantiene unido el interior de las proteínas.',
+      '«Alifático» viene del griego «áleiphar», grasa o aceite. Se usa para las cadenas de carbono que no forman un anillo aromático, sean lineales, ramificadas o cíclicas, como las de las grasas.',
+      'Tres miembros son casos límite. La glicina solo tiene un hidrógeno como cadena lateral, demasiado poco para ser de verdad hidrofóbica. La prolina es alifática pero cierra un anillo con su propio nitrógeno. Y la metionina lleva un azufre, aunque en forma de tioéter (C–S–C), que es poco polar.',
+    ],
   },
   aromatic: {
     label: 'Aromáticos',
     cssVar: '--group-aromatic',
     description:
       'Llevan un anillo aromático voluminoso; absorben luz ultravioleta y participan en interacciones hidrofóbicas y de apilamiento.',
+    explanation: [
+      'En química, «aromático» no habla del olor sino de un tipo de anillo: plano, con enlaces dobles alternados cuyos electrones no pertenecen a un enlace concreto, sino que circulan por todo el anillo. El nombre es histórico, porque los primeros compuestos de este tipo que se conocieron eran olorosos.',
+      'Los tres llevan un anillo así: benceno en la fenilalanina, fenol (benceno con un –OH) en la tirosina e indol (dos anillos fusionados, uno con nitrógeno) en el triptófano. Esos electrones compartidos absorben luz ultravioleta, y por eso la absorbancia a 280 nm, debida sobre todo al triptófano y la tirosina, sirve para medir cuánta proteína hay en una muestra.',
+      'No son igual de hidrofóbicos: la fenilalanina es totalmente apolar, mientras que el –OH de la tirosina y el N–H del triptófano pueden formar puentes de hidrógeno.',
+    ],
   },
   polar: {
     label: 'Polares sin carga',
     cssVar: '--group-polar',
     description:
       'Tienen grupos –OH, –SH o amida que forman puentes de hidrógeno con el agua, pero no ganan ni pierden carga a pH fisiológico.',
+    explanation: [
+      '«Polares» porque su cadena lateral tiene enlaces entre átomos que atraen a los electrones con distinta fuerza (O–H, N–H, C=O). En cada uno de esos enlaces queda un extremo ligeramente negativo y otro ligeramente positivo, y esas cargas parciales forman puentes de hidrógeno con el agua.',
+      '«Sin carga» porque, a pH 7, ninguno gana ni pierde un protón: la carga es solo parcial, nunca una carga completa. Los –OH de la serina y la treonina y las amidas de la asparagina y la glutamina prácticamente no se ionizan en el agua.',
+      'La cisteína es el caso límite: su tiol (–SH) sí puede perder el protón, pero su pKa está por encima de 8, así que a pH 7 la mayor parte sigue protonada. Además, el enlace S–H es mucho menos polar que el O–H, y por eso la cisteína es la menos hidrofílica del grupo.',
+    ],
   },
   positive: {
     label: 'Cargados positivamente',
     cssVar: '--group-positive',
     description:
       'Su cadena lateral lleva un nitrógeno básico que capta un protón; son los aminoácidos básicos.',
+    explanation: [
+      'Se llaman así por la carga que lleva su cadena lateral a pH 7: un nitrógeno ha captado un protón (H⁺) y el grupo queda con una carga positiva completa. También se les dice «básicos», porque aceptar protones es justo lo que define a una base.',
+      'La lisina y la arginina tienen un pKa muy por encima de 7, de modo que están protonadas prácticamente siempre. En la arginina la carga se reparte entre los tres nitrógenos del grupo guanidino, lo que la hace especialmente estable.',
+      'La histidina es distinta: el pKa de su anillo de imidazol está cerca de 6, así que a pH 7 solo alrededor de una de cada diez moléculas lleva la carga. Se incluye en este grupo porque es la única cadena lateral que gana y pierde su protón cerca del pH fisiológico, una propiedad que las enzimas aprovechan.',
+      'En AminoLab las estructuras se dibujan en su forma neutra; la carga se muestra aparte, con el color «carga a pH 7» y la nube de carga.',
+    ],
   },
   negative: {
     label: 'Cargados negativamente',
     cssVar: '--group-negative',
     description:
       'Su cadena lateral termina en un carboxilo que cede su protón a pH 7; son los aminoácidos ácidos.',
+    explanation: [
+      'Se llaman así por la carga que lleva su cadena lateral a pH 7: el carboxilo (–COOH) ha cedido su protón y queda como carboxilato (–COO⁻), con una carga negativa completa repartida entre sus dos oxígenos. También se les dice «ácidos», porque ceder protones es lo que define a un ácido.',
+      'El pKa de esos carboxilos está cerca de 4, tres unidades por debajo de 7, así que a pH fisiológico están desprotonados casi por completo. Por eso es habitual nombrarlos en su forma ionizada: aspartato y glutamato.',
+      'La única diferencia entre ambos es un grupo CH₂ más en el glutámico, que aleja la carga del esqueleto y hace la cadena más flexible.',
+      'En AminoLab las estructuras se dibujan en su forma neutra; la carga se muestra aparte, con el color «carga a pH 7» y la nube de carga.',
+    ],
   },
 }
 

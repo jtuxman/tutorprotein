@@ -31,6 +31,7 @@ describe('AMINO_ACIDS', () => {
       const actual = AMINO_ACIDS.filter((aa) => aa.group === group).map((aa) => aa.code3)
       expect(actual.sort()).toEqual([...codes].sort())
       expect(GROUPS[group as LehningerGroup].label).toBeTruthy()
+      expect(GROUPS[group as LehningerGroup].explanation.length).toBeGreaterThanOrEqual(2)
     }
   })
 

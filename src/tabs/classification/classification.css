@@ -175,6 +175,29 @@
   color: var(--color-muted);
 }
 
+.group-section__why {
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.75);
+}
+
+.group-section__why h4 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: color-mix(in srgb, var(--group-color) 70%, black);
+}
+
+.group-section__why p {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.group-section__why p:last-child {
+  margin-bottom: 0;
+}
+
 .aa-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
