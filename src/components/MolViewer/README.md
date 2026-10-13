@@ -17,7 +17,7 @@ import { MolViewer, aminoAcidMolecule } from '../components/MolViewer'
 | `colorMode` | `'element' \| 'group' \| 'hydrophobic' \| 'kyte-doolittle' \| 'polarity' \| 'charge'` | `'element'` |
 | `surface` | `'none' \| 'charge-cloud' \| 'hydrophobicity'` | `'none'` |
 | `surfaceOpacity` | `number` (0–1) | `0.85` |
-| `showHydrogens` | `boolean` | `true` |
+| `showHydrogens` | `boolean` | `false` |
 | `labels` | `'none' \| 'atoms'` | `'none'` |
 | `spoilerFree` | `boolean` | `false` |
 | `toolbar` | `boolean` | `true` |

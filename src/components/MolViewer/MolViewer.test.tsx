@@ -66,6 +66,9 @@ describe('MolViewer', () => {
     expect(viewer.addLabel.mock.calls.map(([text]) => text).sort()).toEqual([...heavyAtoms].sort())
     expect(screen.getByRole('img', { name: 'Visor 3D de Lisina' })).toBeInTheDocument()
     expect(screen.getByLabelText('Color')).toHaveValue('group')
+    // Por defecto los hidrógenos están ocultos.
+    expect(screen.getByRole('checkbox', { name: 'Mostrar hidrógenos' })).not.toBeChecked()
+    expect(viewer.setStyle).toHaveBeenCalledWith({ elem: 'H' }, {})
     for (const option of revealingOptions()) expect(option.disabled).toBe(false)
   })
 

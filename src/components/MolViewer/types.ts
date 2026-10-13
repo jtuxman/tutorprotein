@@ -36,7 +36,7 @@ export const DEFAULT_STATE: MolViewerState = {
   colorMode: 'element',
   surface: 'none',
   surfaceOpacity: 0.85,
-  showHydrogens: true,
+  showHydrogens: false,
   labels: 'none',
 }
 
