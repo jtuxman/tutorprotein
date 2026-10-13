@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './App.css'
+import { ClassificationTab } from './tabs/classification'
 import { ComingSoon } from './tabs/ComingSoon'
 import { TABS, type TabId } from './tabs/tabs'
 
@@ -49,7 +50,7 @@ function App() {
         aria-labelledby={`tab-${activeTab.id}`}
         key={activeTab.id}
       >
-        <ComingSoon tab={activeTab} />
+        {activeTab.id === 'classification' ? <ClassificationTab /> : <ComingSoon tab={activeTab} />}
       </main>
     </div>
   )

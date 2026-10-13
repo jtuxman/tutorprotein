@@ -1,5 +1,6 @@
 import { PHYSIOLOGICAL_PH, netCharge } from '../../chem/charge'
 import { GROUPS, HYDROPATHY_RANGE, type AminoAcid } from '../../data/aminoacids'
+import { formatSigned } from '../../format'
 import { polarityClass, sideChainColor } from './coloring'
 import { CHARGE_CLOUD_NOTICE, NEUTRAL_STRUCTURE_NOTICE } from './explanations'
 import {
@@ -21,12 +22,6 @@ interface LegendProps {
 
 const ELEMENT_NAMES: Record<string, string> = { C: 'Carbono', H: 'Hidrógeno', N: 'Nitrógeno', O: 'Oxígeno', S: 'Azufre' }
 const POLARITY_NAMES = { nonpolar: 'No polar', polar: 'Polar sin carga', positive: 'Carga +', negative: 'Carga −' }
-
-export function formatSigned(value: number, digits = 1): string {
-  const text = Math.abs(value).toFixed(digits)
-  if (Number(text) === 0) return text
-  return `${value < 0 ? '−' : '+'}${text}`
-}
 
 function Chip({ color, children, active = true }: { color: string; children: React.ReactNode; active?: boolean }) {
   return (
