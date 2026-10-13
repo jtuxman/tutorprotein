@@ -37,7 +37,7 @@ export const DEFAULT_STATE: MolViewerState = {
   surface: 'none',
   surfaceOpacity: 0.85,
   showHydrogens: false,
-  labels: 'none',
+  labels: 'atoms',
 }
 
 const STATE_KEYS = Object.keys(DEFAULT_STATE) as (keyof MolViewerState)[]

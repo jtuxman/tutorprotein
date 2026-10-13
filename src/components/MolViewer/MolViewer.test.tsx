@@ -61,13 +61,15 @@ const revealingOptions = () =>
 
 describe('MolViewer', () => {
   it('etiqueta los átomos pesados con su nombre del CCD', async () => {
-    render(<MolViewer molecule={aminoAcidMolecule(lys)} labels="atoms" colorMode="group" />)
+    // Las etiquetas están activadas por defecto: no hace falta pasar `labels`.
+    render(<MolViewer molecule={aminoAcidMolecule(lys)} colorMode="group" />)
     await waitFor(() => expect(viewer.addLabel).toHaveBeenCalledTimes(heavyAtoms.length))
     expect(viewer.addLabel.mock.calls.map(([text]) => text).sort()).toEqual([...heavyAtoms].sort())
     expect(screen.getByRole('img', { name: 'Visor 3D de Lisina' })).toBeInTheDocument()
     expect(screen.getByLabelText('Color')).toHaveValue('group')
     // Por defecto los hidrógenos están ocultos.
     expect(screen.getByRole('checkbox', { name: 'Mostrar hidrógenos' })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Etiquetas' })).toBeChecked()
     expect(viewer.setStyle).toHaveBeenCalledWith({ elem: 'H' }, {})
     for (const option of revealingOptions()) expect(option.disabled).toBe(false)
   })
