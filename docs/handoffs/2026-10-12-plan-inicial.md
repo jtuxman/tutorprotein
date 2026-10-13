@@ -71,8 +71,8 @@ Componente único en `src/components/MolViewer/`, con barra de herramientas. Cad
 ### Fase 1 — Datos + Clasificación + MolViewer básico
 1. `src/data/aminoacids.ts`: por cada uno de los 20: nombre en español, códigos de 3 y 1 letra, grupo, SMILES neutro, masa molecular, pKa (α-COOH, α-NH3+, cadena lateral si aplica), pI, hidropatía Kyte-Doolittle, si es esencial en humanos, codones, `standard: true`, nota característica. Una sola fuente de valores, anotada en comentario.
 2. SDF ideales de RCSB (`https://files.rcsb.org/ligands/view/{CODIGO}_ideal.sdf`) en `public/structures/`.
-3. MolViewer nivel básico: representaciones, modos de color para aminoácido suelto, nube de carga a pH 7, superficie por hidrofobicidad, etiquetas, medir, captura.
-4. Vista de clasificación: tarjetas por grupo; detalle con 2D, MolViewer y propiedades. Filtros y buscador.
+3. MolViewer nivel básico: representaciones, modos de color para aminoácido suelto, nube de carga a pH 7, superficie por hidrofobicidad, etiquetas, medir, captura. **Por defecto abre con los hidrógenos ocultos y las etiquetas de átomo activadas** (ver "Cambios al plan").
+4. Vista de clasificación: tarjetas por grupo; detalle con 2D, MolViewer y propiedades. Filtros y buscador. **Cada grupo incluye, plegada, una explicación de por qué se llama así** (ver "Cambios al plan").
 5. **Modo comparar** dos aminoácidos lado a lado.
 6. Pruebas: 20 aminoácidos, grupo válido, SMILES no vacío, SDF existente, pI coherente con sus pKa.
 
@@ -181,6 +181,22 @@ Todos registran en el motor de progreso y respetan el estilo lúdico.
 
 ---
 **Instrucción para Claude Code:** implementa **solo la Fase 0** en esta sesión. Al terminar, haz commit, push, añade la sección "Resultado" a este archivo y espera indicaciones antes de seguir.
+
+---
+
+## Cambios al plan
+Decisiones tomadas después de escribir este plan. El detalle de cada una está en el handoff de la fase correspondiente.
+
+| Fecha | Fase | Cambio | Motivo |
+| --- | --- | --- | --- |
+| 2026-10-12 | 1 | **Esencialidad con tres estados** (`essential`, `conditional`, `nonessential`) en lugar del booleano "si es esencial en humanos". | Decidido en el handoff de la Fase 1 (clasificación de Lehninger). |
+| 2026-10-12 | 1 | **Hidrógenos ocultos por defecto** en `MolViewer`; se muestran con el interruptor "Mostrar hidrógenos". | Petición de José Manuel tras ver la Fase 1: la forma de la molécula se lee mejor. |
+| 2026-10-12 | 1 | **Etiquetas de átomo activadas por defecto** en `MolViewer` (nombres CCD en los átomos pesados). Con anti-spoiler siguen ocultas. | Petición de José Manuel tras ver la Fase 1. |
+| 2026-10-12 | 1 | **Explicación "¿Por qué se llaman así?" en cada grupo** de la vista de clasificación: bloque plegado por defecto, debajo de las tarjetas y dentro del recuadro del grupo, con texto original en `GROUPS[...].explanation` (`src/data/aminoacids.ts`). | Petición de José Manuel: la frase del encabezado del grupo era escueta. |
+
+Consecuencias para fases posteriores:
+- Los valores por defecto del visor son de todo el kit: las pestañas nuevas los heredan salvo que su handoff diga otra cosa. En quizzes (Fase 3 en adelante) las etiquetas quedan ocultas por la regla anti-spoiler, no por el valor por defecto.
+- Los textos explicativos de los grupos son contenido didáctico de `src/data/`; si la Fase 2 añade mnemotecnias o trivia por grupo, van junto a ellos.
 
 ---
 

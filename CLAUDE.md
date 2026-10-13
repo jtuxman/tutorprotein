@@ -8,7 +8,7 @@ Web de aprendizaje de aminoácidos y proteínas con seis pestañas:
 5. **Juegos**: ahorcado, arcade de invasores, memorama.
 6. **Mi progreso**: mapa de dominio, niveles, modo examen, modo docente.
 
-El plan maestro está en `docs/handoffs/2026-10-12-plan-inicial.md`. Cada fase llega con su propio handoff detallado.
+El plan maestro está en `docs/handoffs/2026-10-12-plan-inicial.md`. Cada fase llega con su propio handoff detallado. Los cambios decididos después se anotan en la sección "Cambios al plan" del plan maestro y en "Cambios posteriores" del handoff de la fase.
 
 ## Cómo trabajamos
 - Las decisiones se toman en el chat web y llegan aquí como documentos en `docs/handoffs/`. Antes de empezar una tarea, lee el handoff más reciente.
@@ -32,6 +32,7 @@ El plan maestro está en `docs/handoffs/2026-10-12-plan-inicial.md`. Cada fase l
 - En modo quiz, nunca mostrar etiquetas, nombres ni colores que revelen la respuesta.
 - **Todo visor 3D usa el componente compartido `MolViewer`** (`src/components/MolViewer/`). No crear visores sueltos: si una pestaña necesita una vista nueva (modo de color, superficie, interacción), se agrega al kit y queda disponible para todas.
 - **Regla anti-spoiler**: durante una pregunta, desactivar los modos de color, etiquetas y nubes de carga que delaten la respuesta; reactivarlos al responder.
+- **Valores por defecto de `MolViewer`**: hidrógenos ocultos y etiquetas de átomo activadas (bolas y varillas, color por elemento, sin superficie). No cambiarlos en una pestaña sin que lo pida su handoff; en quizzes manda la regla anti-spoiler.
 - La nube de carga es un **potencial de Coulomb aproximado a pH 7**, calculado en un Web Worker. La interfaz debe indicar que es una aproximación educativa (no APBS).
 - **Todo resultado de pregunta, quiz, juego o reto se registra en el motor de progreso** (`src/progress/`). No guardar progreso por separado en cada pestaña.
 - **Choques estéricos**: solapamiento ≥ 0.4 Å respecto a la suma de radios de van der Waals entre átomos no enlazados (convención MolProbity).
