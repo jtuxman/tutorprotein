@@ -1,7 +1,7 @@
 import { PHYSIOLOGICAL_PH, netCharge } from '../../chem/charge'
 import { GROUPS, HYDROPATHY_RANGE, type AminoAcid } from '../../data/aminoacids'
 import { polarityClass, sideChainColor } from './coloring'
-import { NEUTRAL_STRUCTURE_NOTICE } from './explanations'
+import { CHARGE_CLOUD_NOTICE, NEUTRAL_STRUCTURE_NOTICE } from './explanations'
 import {
   ELEMENT_COLORS,
   HYDROPHILIC_COLOR,
@@ -121,10 +121,38 @@ function ColorLegend({ state, aminoAcid }: LegendProps) {
   }
 }
 
+function SurfaceLegend({ state, aminoAcid }: LegendProps) {
+  if (!aminoAcid || state.surface === 'none') return null
+  if (state.surface === 'charge-cloud') {
+    return (
+      <div className="mol-legend mol-legend--surface">
+        <strong>Nube:</strong>
+        <GradientBar colors={[NEGATIVE_COLOR, '#ffffff', POSITIVE_COLOR]} min="−" max="+" />
+        <span className="mol-legend__note">
+          {CHARGE_CLOUD_NOTICE} {NEUTRAL_STRUCTURE_NOTICE}
+        </span>
+      </div>
+    )
+  }
+  return (
+    <div className="mol-legend mol-legend--surface">
+      <strong>Superficie:</strong>
+      <Chip color={HYDROPHOBIC_COLOR}>Apolar (C, S y sus H)</Chip>
+      <Chip color={HYDROPHILIC_COLOR}>Polar (N, O y sus H)</Chip>
+      <span>
+        Hidropatía de {aminoAcid.name} (Kyte-Doolittle): {formatSigned(aminoAcid.hydropathy)}
+      </span>
+    </div>
+  )
+}
+
 export function Legend(props: LegendProps) {
   return (
-    <div className="mol-legend">
-      <ColorLegend {...props} />
-    </div>
+    <>
+      <div className="mol-legend">
+        <ColorLegend {...props} />
+      </div>
+      <SurfaceLegend {...props} />
+    </>
   )
 }

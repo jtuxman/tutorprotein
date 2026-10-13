@@ -15,6 +15,7 @@ const { viewer } = vi.hoisted(() => {
     setClickable: vi.fn(),
     removeAllModels: vi.fn(),
     removeAllSurfaces: vi.fn(),
+    removeSurface: vi.fn(),
     removeAllLabels: vi.fn(),
     removeAllShapes: vi.fn(),
     zoomTo: vi.fn(),

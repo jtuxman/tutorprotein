@@ -1,6 +1,12 @@
 import { useState } from 'react'
-import { COLOR_MODES, REPRESENTATIONS, TOOLS, type Explanation } from './explanations'
-import { isRevealingColorMode, type ColorMode, type MolViewerState, type Representation } from './types'
+import { COLOR_MODES, REPRESENTATIONS, SURFACES, TOOLS, type Explanation } from './explanations'
+import {
+  isRevealingColorMode,
+  type ColorMode,
+  type MolViewerState,
+  type Representation,
+  type SurfaceMode,
+} from './types'
 
 interface ToolbarProps {
   state: MolViewerState
@@ -41,6 +47,7 @@ export function Toolbar({ state, onChange, spoilerFree, hasAminoAcid, disabled, 
   const explanations = {
     representation: REPRESENTATIONS[state.representation],
     color: COLOR_MODES[state.colorMode],
+    surface: SURFACES[state.surface],
     hydrogens: TOOLS.hydrogens,
     labels: TOOLS.labels,
   }
@@ -97,6 +104,41 @@ export function Toolbar({ state, onChange, spoilerFree, hasAminoAcid, disabled, 
           </label>
           <InfoButton id="color" {...infoProps} />
         </div>
+
+        <div className="mol-toolbar__field">
+          <label>
+            <span className="mol-toolbar__label">Superficie</span>
+            <select
+              value={state.surface}
+              disabled={disabled}
+              onChange={(event) => onChange({ surface: event.target.value as SurfaceMode })}
+            >
+              {(Object.keys(SURFACES) as SurfaceMode[]).map((key) => (
+                <option key={key} value={key} disabled={propertiesLocked && key !== 'none'}>
+                  {SURFACES[key].label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <InfoButton id="surface" {...infoProps} />
+        </div>
+
+        {state.surface !== 'none' && (
+          <div className="mol-toolbar__field">
+            <label>
+              <span className="mol-toolbar__label">Opacidad</span>
+              <input
+                type="range"
+                min={0.3}
+                max={1}
+                step={0.05}
+                value={state.surfaceOpacity}
+                disabled={disabled}
+                onChange={(event) => onChange({ surfaceOpacity: Number(event.target.value) })}
+              />
+            </label>
+          </div>
+        )}
 
         <div className="mol-toolbar__field">
           <label className="mol-toolbar__check">

@@ -1,17 +1,32 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AtomSpec, GLViewer } from '3dmol'
 import { ccdCode } from '../../data/aminoacids'
-import { atomColors, type SceneAtom } from './coloring'
+import {
+  CLOUD_SCALE,
+  atomCharges,
+  computePotentialGrid,
+  gridSpecFor,
+  type CloudRequest,
+  type CloudResponse,
+  type GridSpec,
+} from './chargeCloud'
+import { apolarMask, atomColors, type SceneAtom } from './coloring'
 import { Legend } from './Legend'
-import { load3Dmol } from './load3Dmol'
+import { load3Dmol, type Lib3Dmol } from './load3Dmol'
 import { faceOnQuaternion } from './orientation'
-import { VIEWER_BACKGROUND } from './palette'
+import { HYDROPHILIC_COLOR, HYDROPHOBIC_COLOR, VIEWER_BACKGROUND } from './palette'
 import { fetchAtomNames, fetchStructure } from './structures'
 import { Toolbar } from './Toolbar'
 import { DEFAULT_STATE, resolveState, type MolViewerProps, type MolViewerState, type Representation } from './types'
 import './MolViewer.css'
 
 type ColorFunc = (atom: AtomSpec) => string
+
+interface Cloud {
+  url: string
+  spec: GridSpec
+  data: Float32Array
+}
 
 interface Scene {
   /** URL de la molécula cargada; evita pintar una molécula con los datos de otra. */
@@ -70,6 +85,9 @@ export function MolViewer(props: MolViewerProps) {
   )
 
   const canvasRef = useRef<HTMLDivElement>(null)
+  const libRef = useRef<Lib3Dmol | null>(null)
+  const workerRef = useRef<Worker | null>(null)
+  const cloudRef = useRef<Cloud | null>(null)
   const [viewer, setViewer] = useState<GLViewer | null>(null)
   const [scene, setScene] = useState<Scene | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -93,6 +111,7 @@ export function MolViewer(props: MolViewerProps) {
     load3Dmol()
       .then((lib) => {
         if (cancelled || !container) return
+        libRef.current = lib
         created = lib.createViewer(container, { backgroundColor: VIEWER_BACKGROUND }) ?? null
         if (!created) throw new Error('No se pudo crear el visor')
         setViewer(created)
@@ -104,7 +123,34 @@ export function MolViewer(props: MolViewerProps) {
       cancelled = true
       if (created) releaseViewer(created, container)
       setViewer(null)
+      workerRef.current?.terminate()
+      workerRef.current = null
     }
+  }, [])
+
+  /** Rejilla de potencial de la molécula actual; se calcula una vez, en un Web Worker. */
+  const requestCloud = useCallback((current: Scene, charges: number[]): Promise<Cloud> => {
+    const cached = cloudRef.current
+    if (cached?.url === current.url) return Promise.resolve(cached)
+    const spec = gridSpecFor(current.atoms)
+    const finish = (data: Float32Array) => (cloudRef.current = { url: current.url, spec, data })
+    if (typeof Worker === 'undefined') {
+      return Promise.resolve(finish(computePotentialGrid(current.atoms, charges, spec)))
+    }
+    workerRef.current ??= new Worker(new URL('./chargeCloud.worker.ts', import.meta.url), { type: 'module' })
+    const worker = workerRef.current
+    const id = Math.random()
+    return new Promise((resolve, reject) => {
+      const onMessage = (event: MessageEvent<CloudResponse>) => {
+        if (event.data.id !== id) return
+        worker.removeEventListener('message', onMessage)
+        resolve(finish(event.data.data))
+      }
+      worker.addEventListener('message', onMessage)
+      worker.addEventListener('error', reject, { once: true })
+      const request: CloudRequest = { id, atoms: current.atoms.map(({ x, y, z }) => ({ x, y, z })), charges, spec }
+      worker.postMessage(request)
+    })
   }, [])
 
   // Mantiene el lienzo ajustado al tamaño de su contenedor.
@@ -185,6 +231,51 @@ export function MolViewer(props: MolViewerProps) {
     }
     viewer.render()
   }, [ready, viewer, scene, state.labels])
+
+  // Superficies: nube de carga (pH 7) o hidrofobicidad por átomo.
+  useEffect(() => {
+    const lib = libRef.current
+    if (!ready || !viewer || !scene || !lib || !aminoAcid) return
+    if (state.surface === 'none') return
+    let cancelled = false
+    let surface: Promise<unknown> | null = null
+    const add = (style: Record<string, unknown>) => {
+      if (cancelled) return
+      const created = viewer.addSurface(lib.SurfaceType.SES, { opacity: state.surfaceOpacity, ...style })
+      surface = created
+      created.then(() => viewer.render())
+    }
+
+    if (state.surface === 'hydrophobicity') {
+      const apolar = apolarMask(scene.atoms)
+      add({ colorfunc: (atom: AtomSpec) => (apolar[atom.index ?? 0] ? HYDROPHOBIC_COLOR : HYDROPHILIC_COLOR) })
+    } else {
+      const charges = atomCharges(aminoAcid, scene.atoms.map((atom) => atom.name))
+      requestCloud(scene, charges)
+        .then((cloud) => {
+          const voldata = new lib.VolumeData('', 'none')
+          const [x, y, z] = cloud.spec.origin
+          const [nx, ny, nz] = cloud.spec.size
+          voldata.origin = { x, y, z }
+          voldata.unit = { x: cloud.spec.step, y: cloud.spec.step, z: cloud.spec.step }
+          voldata.size = { x: nx, y: ny, z: nz }
+          voldata.data = cloud.data as Float32Array<ArrayBuffer>
+          add({ voldata, volscheme: new lib.Gradient.RWB(-CLOUD_SCALE, CLOUD_SCALE) })
+        })
+        .catch((error) => console.error('No se pudo calcular la nube de carga', error))
+    }
+
+    return () => {
+      cancelled = true
+      // La superficie se crea de forma asíncrona: se retira cuando termine.
+      if (surface) {
+        surface.then((id) => {
+          viewer.removeSurface(id as number)
+          viewer.render()
+        })
+      }
+    }
+  }, [ready, viewer, scene, aminoAcid, state.surface, state.surfaceOpacity, requestCloud])
 
   const reset = () => {
     if (!viewer || !scene) return

@@ -240,6 +240,17 @@
   background: var(--color-text);
 }
 
+.mol-legend--surface {
+  padding-top: 6px;
+  border-top: 1px dashed #d9cdf5;
+}
+
+.mol-toolbar input[type='range'] {
+  width: 110px;
+  height: 36px;
+  accent-color: var(--color-primary);
+}
+
 .mol-legend__note {
   flex-basis: 100%;
   font-style: italic;

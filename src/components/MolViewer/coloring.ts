@@ -96,3 +96,14 @@ export function atomColors(mode: ColorMode, atoms: SceneAtom[], aminoAcid?: Amin
   const color = sideChainColor(mode, aminoAcid)
   return atoms.map((_, index) => (backbone[index] ? NEUTRAL_COLOR : color))
 }
+
+/**
+ * Superficie por hidrofobicidad de un aminoácido suelto, átomo por átomo:
+ * C, S y los H unidos a ellos son apolares; N, O y sus H, polares.
+ */
+export function apolarMask(atoms: SceneAtom[]): boolean[] {
+  const apolar = (element: string) => element === 'C' || element === 'S'
+  return atoms.map((atom) =>
+    atom.element === 'H' ? atom.bonds.every((neighbor) => apolar(atoms[neighbor].element)) : apolar(atom.element),
+  )
+}
