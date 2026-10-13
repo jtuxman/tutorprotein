@@ -99,16 +99,19 @@ export function MolViewer(props: MolViewerProps) {
   const [picks, setPicks] = useState<number[]>([])
   const [measurements, setMeasurements] = useState<Measurement[]>([])
   const pickRef = useRef<(index: number) => void>(() => {})
-  pickRef.current = (index) => {
-    if (!measureKind || !scene || picks.includes(index)) return
-    const next = [...picks, index]
-    if (next.length < MEASURE_KINDS[measureKind].atoms) {
-      setPicks(next)
-      return
+  // El visor llama siempre a la versión más reciente del manejador de clics.
+  useEffect(() => {
+    pickRef.current = (index) => {
+      if (!measureKind || !scene || picks.includes(index)) return
+      const next = [...picks, index]
+      if (next.length < MEASURE_KINDS[measureKind].atoms) {
+        setPicks(next)
+        return
+      }
+      setMeasurements((list) => [...list, measure(measureKind, next, next.map((i) => scene.atoms[i]))])
+      setPicks([])
     }
-    setMeasurements((list) => [...list, measure(measureKind, next, next.map((i) => scene.atoms[i]))])
-    setPicks([])
-  }
+  }, [measureKind, scene, picks])
   const changeMeasureKind = (kind: MeasureKind | null) => {
     setMeasureKind(kind)
     setPicks([])

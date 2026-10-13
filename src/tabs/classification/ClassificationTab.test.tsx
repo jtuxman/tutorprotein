@@ -10,6 +10,7 @@ vi.mock('../../components/MolViewer', () => ({
     <div data-testid="mol-viewer">{molecule.aminoAcid?.name}</div>
   ),
   aminoAcidMolecule: (aminoAcid: { name: string }) => ({ kind: 'sdf', url: '', aminoAcid }),
+  DEFAULT_VIEWER_STATE: {},
 }))
 
 const cards = () => screen.queryAllByRole('listitem')
@@ -27,7 +28,7 @@ describe('ClassificationTab', () => {
     render(<ClassificationTab />)
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'glutamico' } })
     expect(cards()).toHaveLength(1)
-    expect(screen.getByRole('button', { name: /Ácido glutámico/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Comparar Ácido glutámico' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Quitar filtros' }))
     fireEvent.click(screen.getByRole('button', { name: 'Cargados positivamente' }))
@@ -42,7 +43,7 @@ describe('ClassificationTab', () => {
 
   it('abre la ficha al tocar una tarjeta y vuelve a la lista', () => {
     render(<ClassificationTab />)
-    fireEvent.click(screen.getByRole('button', { name: /Lisina/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^Estructura 2D de Lisina/ }))
     expect(screen.getByRole('heading', { name: 'Lisina' })).toBeInTheDocument()
     expect(screen.getByTestId('mol-viewer')).toHaveTextContent('Lisina')
     expect(screen.getByRole('row', { name: /Punto isoeléctrico/ })).toHaveTextContent('9.74')
@@ -53,5 +54,35 @@ describe('ClassificationTab', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Volver/ }))
     expect(cards()).toHaveLength(20)
+  })
+
+  it('compara dos tarjetas elegidas y resalta las diferencias', () => {
+    render(<ClassificationTab />)
+    fireEvent.click(screen.getByRole('button', { name: 'Comparar Leucina' }))
+    expect(screen.getByRole('button', { name: 'Comparar' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Comparar Isoleucina' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Comparar' }))
+
+    expect(screen.getAllByTestId('mol-viewer').map((viewer) => viewer.textContent)).toEqual(['Leucina', 'Isoleucina'])
+    // Son isómeros: misma masa, distinta hidropatía.
+    expect(screen.getByRole('row', { name: /Masa molecular/ })).not.toHaveClass('property-table__row--differs')
+    expect(screen.getByRole('row', { name: /Hidropatía/ })).toHaveClass('property-table__row--differs')
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Segundo aminoácido' }), { target: { value: 'Val' } })
+    expect(screen.getAllByTestId('mol-viewer')[1]).toHaveTextContent('Valina')
+
+    fireEvent.click(screen.getByRole('button', { name: /Volver/ }))
+    expect(cards()).toHaveLength(20)
+    expect(screen.queryByRole('button', { name: 'Comparar' })).not.toBeInTheDocument()
+  })
+
+  it('abre la comparación desde la ficha', () => {
+    render(<ClassificationTab />)
+    fireEvent.click(screen.getByRole('button', { name: /^Estructura 2D de Ácido aspártico/ }))
+    fireEvent.change(screen.getByLabelText(/Comparar con/), { target: { value: 'Glu' } })
+    expect(screen.getAllByTestId('mol-viewer').map((viewer) => viewer.textContent)).toEqual([
+      'Ácido aspártico',
+      'Ácido glutámico',
+    ])
   })
 })

@@ -7,9 +7,10 @@ interface AminoAcidDetailProps {
   aminoAcid: AminoAcid
   onBack: () => void
   onNavigate: (aminoAcid: AminoAcid) => void
+  onCompare: (first: AminoAcid, second: AminoAcid) => void
 }
 
-export function AminoAcidDetail({ aminoAcid, onBack, onNavigate }: AminoAcidDetailProps) {
+export function AminoAcidDetail({ aminoAcid, onBack, onNavigate, onCompare }: AminoAcidDetailProps) {
   const index = AMINO_ACIDS.indexOf(aminoAcid)
   const previous = AMINO_ACIDS[(index - 1 + AMINO_ACIDS.length) % AMINO_ACIDS.length]
   const next = AMINO_ACIDS[(index + 1) % AMINO_ACIDS.length]
@@ -47,6 +48,24 @@ export function AminoAcidDetail({ aminoAcid, onBack, onNavigate }: AminoAcidDeta
         </div>
       </header>
       <p className="aa-detail__note">{aminoAcid.note}</p>
+
+      <label className="aa-detail__compare">
+        <span aria-hidden="true">⚖️</span> Comparar con
+        <select
+          value=""
+          onChange={(event) => {
+            const other = AMINO_ACIDS.find((aa) => aa.code3 === event.target.value)
+            if (other) onCompare(aminoAcid, other)
+          }}
+        >
+          <option value="">Elige otro aminoácido…</option>
+          {AMINO_ACIDS.filter((aa) => aa !== aminoAcid).map((aa) => (
+            <option key={aa.code3} value={aa.code3}>
+              {aa.name} ({aa.code3})
+            </option>
+          ))}
+        </select>
+      </label>
 
       <div className="aa-detail__structures">
         <section className="panel" aria-label="Estructura 2D">
