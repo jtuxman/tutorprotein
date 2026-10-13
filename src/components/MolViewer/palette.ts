@@ -31,6 +31,9 @@ export const NEGATIVE_COLOR = '#ef4444'
 export const POSITIVE_COLOR = '#3b82f6'
 export const ZERO_CHARGE_COLOR = '#f4f2fb'
 
+/** Átomos elegidos, líneas y etiquetas de las medidas. */
+export const MEASURE_COLOR = '#f472b6'
+
 const FALLBACK_GROUP_COLOR = '#a78bfa'
 
 /** Color del grupo de Lehninger, tomado de su variable CSS. */

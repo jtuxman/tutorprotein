@@ -13,8 +13,9 @@ import {
 import { apolarMask, atomColors, type SceneAtom } from './coloring'
 import { Legend } from './Legend'
 import { load3Dmol, type Lib3Dmol } from './load3Dmol'
+import { MEASURE_KINDS, measure, type MeasureKind, type Measurement } from './measure'
 import { faceOnQuaternion } from './orientation'
-import { HYDROPHILIC_COLOR, HYDROPHOBIC_COLOR, VIEWER_BACKGROUND } from './palette'
+import { HYDROPHILIC_COLOR, HYDROPHOBIC_COLOR, MEASURE_COLOR, VIEWER_BACKGROUND } from './palette'
 import { fetchAtomNames, fetchStructure } from './structures'
 import { Toolbar } from './Toolbar'
 import { DEFAULT_STATE, resolveState, type MolViewerProps, type MolViewerState, type Representation } from './types'
@@ -92,6 +93,30 @@ export function MolViewer(props: MolViewerProps) {
   const [scene, setScene] = useState<Scene | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const ready = status === 'ready' && viewer !== null && scene?.url === molecule.url
+
+  // Medidas: son del visor, no forman parte del estado compartido.
+  const [measureKind, setMeasureKind] = useState<MeasureKind | null>(null)
+  const [picks, setPicks] = useState<number[]>([])
+  const [measurements, setMeasurements] = useState<Measurement[]>([])
+  const pickRef = useRef<(index: number) => void>(() => {})
+  pickRef.current = (index) => {
+    if (!measureKind || !scene || picks.includes(index)) return
+    const next = [...picks, index]
+    if (next.length < MEASURE_KINDS[measureKind].atoms) {
+      setPicks(next)
+      return
+    }
+    setMeasurements((list) => [...list, measure(measureKind, next, next.map((i) => scene.atoms[i]))])
+    setPicks([])
+  }
+  const changeMeasureKind = (kind: MeasureKind | null) => {
+    setMeasureKind(kind)
+    setPicks([])
+  }
+  const clearMeasurements = () => {
+    setMeasurements([])
+    setPicks([])
+  }
 
   const update = useCallback(
     (patch: Partial<MolViewerState>) => {
@@ -190,6 +215,9 @@ export function MolViewer(props: MolViewerProps) {
           z: atom.z ?? 0,
         }))
         setScene({ url, atoms: sceneAtoms })
+        setPicks([])
+        setMeasurements([])
+        viewer.setClickable({}, true, (atom: AtomSpec) => pickRef.current(atom.index ?? -1))
         frame(viewer, sceneAtoms)
         setStatus('ready')
       })
@@ -211,26 +239,51 @@ export function MolViewer(props: MolViewerProps) {
     viewer.render()
   }, [ready, viewer, scene, aminoAcid, state.representation, state.colorMode, state.showHydrogens])
 
-  // Etiquetas con el nombre CCD de cada átomo pesado.
+  // Etiquetas de átomo y medidas (se redibujan juntas: comparten capa de etiquetas y formas).
   useEffect(() => {
     if (!ready || !viewer || !scene) return
     viewer.removeAllLabels()
+    viewer.removeAllShapes()
+    const label = (text: string, position: { x: number; y: number; z: number }, backgroundColor: string) =>
+      viewer.addLabel(text, {
+        position: { x: position.x, y: position.y, z: position.z },
+        fontSize: 12,
+        fontColor: '#ffffff',
+        backgroundColor,
+        backgroundOpacity: 0.6,
+        inFront: true,
+        alignment: 'center',
+      })
+
     if (state.labels === 'atoms') {
       for (const atom of scene.atoms) {
-        if (atom.element === 'H' || !atom.name) continue
-        viewer.addLabel(atom.name, {
-          position: { x: atom.x, y: atom.y, z: atom.z },
-          fontSize: 12,
-          fontColor: '#ffffff',
-          backgroundColor: '#000000',
-          backgroundOpacity: 0.55,
-          inFront: true,
-          alignment: 'center',
-        })
+        if (atom.element !== 'H' && atom.name) label(atom.name, atom, '#000000')
       }
     }
+    for (const index of picks) {
+      const { x, y, z } = scene.atoms[index]
+      viewer.addSphere({ center: { x, y, z }, radius: 0.5, color: MEASURE_COLOR, opacity: 0.65 })
+    }
+    for (const measurement of measurements) {
+      const points = measurement.atoms.map((index) => scene.atoms[index])
+      for (let i = 1; i < points.length; i++) {
+        const [start, end] = [points[i - 1], points[i]]
+        viewer.addCylinder({
+          start: { x: start.x, y: start.y, z: start.z },
+          end: { x: end.x, y: end.y, z: end.z },
+          radius: 0.06,
+          dashed: true,
+          dashLength: 0.2,
+          gapLength: 0.15,
+          color: MEASURE_COLOR,
+          fromCap: 1,
+          toCap: 1,
+        })
+      }
+      label(measurement.text, measurement.anchor, MEASURE_COLOR)
+    }
     viewer.render()
-  }, [ready, viewer, scene, state.labels])
+  }, [ready, viewer, scene, state.labels, picks, measurements])
 
   // Superficies: nube de carga (pH 7) o hidrofobicidad por átomo.
   useEffect(() => {
@@ -305,10 +358,19 @@ export function MolViewer(props: MolViewerProps) {
           disabled={!ready}
           onReset={reset}
           onCapture={capture}
+          measureKind={measureKind}
+          onMeasureKindChange={changeMeasureKind}
+          hasMeasurements={measurements.length > 0 || picks.length > 0}
+          onClearMeasurements={clearMeasurements}
         />
       )}
       <div className="mol-viewer__stage">
         <div ref={canvasRef} className="mol-viewer__canvas" role="img" aria-label={title} />
+        {measureKind && status === 'ready' && (
+          <p className="mol-viewer__hint" role="status">
+            Toca {MEASURE_KINDS[measureKind].atoms} átomos · {picks.length} de {MEASURE_KINDS[measureKind].atoms}
+          </p>
+        )}
         {status === 'loading' && (
           <div className="mol-viewer__overlay" role="status">
             <span className="mol-viewer__spinner" aria-hidden="true" />

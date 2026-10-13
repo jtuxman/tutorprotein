@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AMINO_ACIDS } from '../../data/aminoacids'
 import { parseSdfAtoms, readAtomNames, readStructure } from '../../test/structures'
 import { MolViewer } from './MolViewer'
@@ -11,6 +11,8 @@ const { viewer } = vi.hoisted(() => {
     addModel: vi.fn(() => model),
     addLabel: vi.fn(),
     addSurface: vi.fn(() => Promise.resolve(1)),
+    addSphere: vi.fn(),
+    addCylinder: vi.fn(),
     setStyle: vi.fn(),
     setClickable: vi.fn(),
     removeAllModels: vi.fn(),
@@ -77,5 +79,25 @@ describe('MolViewer', () => {
     expect(viewer.addSurface).not.toHaveBeenCalled()
     expect(screen.queryByText(/Lisina/)).not.toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Visor 3D de la molécula' })).toBeInTheDocument()
+  })
+
+  it('mide la distancia entre dos átomos tocados', async () => {
+    render(<MolViewer molecule={aminoAcidMolecule(lys)} />)
+    await waitFor(() => expect(viewer.setClickable).toHaveBeenCalled())
+    const pick = viewer.setClickable.mock.calls[0][2] as (atom: { index: number }) => void
+    const names = readAtomNames().LYS
+
+    fireEvent.change(screen.getByLabelText('Medir'), { target: { value: 'distance' } })
+    expect(screen.getByRole('status')).toHaveTextContent('0 de 2')
+    act(() => pick({ index: names.indexOf('CA') }))
+    expect(screen.getByRole('status')).toHaveTextContent('1 de 2')
+    act(() => pick({ index: names.indexOf('CB') }))
+
+    await waitFor(() => expect(viewer.addCylinder).toHaveBeenCalledTimes(1))
+    const texts = viewer.addLabel.mock.calls.map(([text]) => text as string)
+    expect(texts.at(-1)).toMatch(/^1\.5\d Å$/)
+
+    fireEvent.click(screen.getByRole('button', { name: /Borrar medidas/ }))
+    expect(screen.queryByRole('button', { name: /Borrar medidas/ })).not.toBeInTheDocument()
   })
 })

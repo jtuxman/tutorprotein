@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { COLOR_MODES, REPRESENTATIONS, SURFACES, TOOLS, type Explanation } from './explanations'
+import { MEASURE_KINDS, type MeasureKind } from './measure'
 import {
   isRevealingColorMode,
   type ColorMode,
@@ -17,6 +18,10 @@ interface ToolbarProps {
   disabled: boolean
   onReset: () => void
   onCapture: () => void
+  measureKind: MeasureKind | null
+  onMeasureKindChange: (kind: MeasureKind | null) => void
+  hasMeasurements: boolean
+  onClearMeasurements: () => void
 }
 
 interface InfoButtonProps<Key extends string> {
@@ -40,7 +45,19 @@ function InfoButton<Key extends string>({ id, explanations, current, onToggle }:
   )
 }
 
-export function Toolbar({ state, onChange, spoilerFree, hasAminoAcid, disabled, onReset, onCapture }: ToolbarProps) {
+export function Toolbar({
+  state,
+  onChange,
+  spoilerFree,
+  hasAminoAcid,
+  disabled,
+  onReset,
+  onCapture,
+  measureKind,
+  onMeasureKindChange,
+  hasMeasurements,
+  onClearMeasurements,
+}: ToolbarProps) {
   // En pantallas pequeñas la barra se pliega; el CSS la muestra siempre en escritorio.
   const [open, setOpen] = useState(false)
   // La explicación abierta sigue a la opción elegida en ese control.
@@ -50,6 +67,7 @@ export function Toolbar({ state, onChange, spoilerFree, hasAminoAcid, disabled, 
     surface: SURFACES[state.surface],
     hydrogens: TOOLS.hydrogens,
     labels: TOOLS.labels,
+    measure: TOOLS.measure,
   }
   const [infoKey, setInfoKey] = useState<keyof typeof explanations | null>(null)
   const toggleInfo = (id: keyof typeof explanations) => setInfoKey((shown) => (shown === id ? null : id))
@@ -164,6 +182,30 @@ export function Toolbar({ state, onChange, spoilerFree, hasAminoAcid, disabled, 
             Etiquetas
           </label>
           <InfoButton id="labels" {...infoProps} />
+        </div>
+
+        <div className="mol-toolbar__field">
+          <label>
+            <span className="mol-toolbar__label">Medir</span>
+            <select
+              value={measureKind ?? ''}
+              disabled={disabled}
+              onChange={(event) => onMeasureKindChange((event.target.value || null) as MeasureKind | null)}
+            >
+              <option value="">Desactivado</option>
+              {(Object.keys(MEASURE_KINDS) as MeasureKind[]).map((key) => (
+                <option key={key} value={key}>
+                  {MEASURE_KINDS[key].label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <InfoButton id="measure" {...infoProps} />
+          {hasMeasurements && (
+            <button type="button" className="mol-toolbar__button" onClick={onClearMeasurements}>
+              <span aria-hidden="true">🧹</span> Borrar medidas
+            </button>
+          )}
         </div>
 
         <div className="mol-toolbar__field">

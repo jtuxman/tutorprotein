@@ -37,6 +37,22 @@
   background: rgb(33 26 61 / 0.85);
 }
 
+.mol-viewer__hint {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgb(244 114 182 / 0.9);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
 .mol-viewer__spinner {
   width: 36px;
   height: 36px;
