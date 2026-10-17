@@ -4,22 +4,42 @@ import { chargeSign, type ChargeSign } from '../../chem/charge'
 import { hasElement } from '../../chem/smiles'
 import type { AminoAcid, Essentiality, LehningerGroup } from '../../data/aminoacids'
 
+export type HydropathyKind = 'hydrophobic' | 'hydrophilic'
+
 export interface Filters {
   query: string
   groups: LehningerGroup[]
   /** Signo de la carga neta a pH 7, redondeada al entero más cercano. */
   charges: ChargeSign[]
+  /** Carácter hidrofóbico (KD > 0) o hidrofílico (KD ≤ 0). */
+  hydropathy: HydropathyKind[]
   essentiality: Essentiality[]
   /** Solo los que tienen azufre en la cadena lateral. */
   sulfur: boolean
 }
 
-export const EMPTY_FILTERS: Filters = { query: '', groups: [], charges: [], essentiality: [], sulfur: false }
+export const EMPTY_FILTERS: Filters = {
+  query: '',
+  groups: [],
+  charges: [],
+  hydropathy: [],
+  essentiality: [],
+  sulfur: false,
+}
 
 export const CHARGE_LABELS: Record<ChargeSign, string> = {
   positive: 'Carga +',
   negative: 'Carga −',
   neutral: 'Neutro',
+}
+
+export const HYDROPATHY_LABELS: Record<HydropathyKind, string> = {
+  hydrophobic: 'Hidrofóbico',
+  hydrophilic: 'Hidrofílico',
+}
+
+export function hydropathyKind(aminoAcid: Pick<AminoAcid, 'hydropathy'>): HydropathyKind {
+  return aminoAcid.hydropathy > 0 ? 'hydrophobic' : 'hydrophilic'
 }
 
 /** Minúsculas y sin acentos, para comparar texto escrito a mano. */
@@ -53,6 +73,7 @@ export function applyFilters(aminoAcids: AminoAcid[], filters: Filters): AminoAc
       matchesQuery(aa, filters.query) &&
       allows(filters.groups, aa.group) &&
       allows(filters.charges, chargeSign(aa)) &&
+      allows(filters.hydropathy ?? [], hydropathyKind(aa)) &&
       allows(filters.essentiality, aa.essentiality) &&
       (!filters.sulfur || hasSulfur(aa)),
   )
@@ -63,6 +84,7 @@ export function hasActiveFilters(filters: Filters): boolean {
     filters.query.trim() !== '' ||
     filters.groups.length > 0 ||
     filters.charges.length > 0 ||
+    (filters.hydropathy?.length ?? 0) > 0 ||
     filters.essentiality.length > 0 ||
     filters.sulfur
   )

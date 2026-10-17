@@ -314,6 +314,24 @@
   font-weight: 800;
 }
 
+.aa-card__hydro {
+  margin-top: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.aa-card__hydro--hydrophobic {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.aa-card__hydro--hydrophilic {
+  background: #cffafe;
+  color: #155e75;
+}
+
 /* ---------- Ficha ---------- */
 .aa-detail {
   display: flex;

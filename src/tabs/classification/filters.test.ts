@@ -32,6 +32,7 @@ describe('filtros de clasificación', () => {
     expect(codes({ charges: ['positive'] })).toEqual(['Arg', 'Lys'])
     expect(codes({ sulfur: true })).toEqual(['Cys', 'Met'])
     expect(codes({ sulfur: true, essentiality: ['essential'] })).toEqual(['Met'])
+    expect(codes({ groups: ['polar'], hydropathy: ['hydrophobic'] })).toEqual(['Cys'])
     expect(codes({ groups: ['negative'], charges: ['positive'] })).toEqual([])
   })
 

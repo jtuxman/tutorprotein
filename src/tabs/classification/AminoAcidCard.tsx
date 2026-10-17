@@ -1,5 +1,7 @@
 import { Structure2D } from '../../components/Structure2D'
 import { GROUPS, type AminoAcid } from '../../data/aminoacids'
+import { formatSigned } from '../../format'
+import { HYDROPATHY_LABELS, hydropathyKind } from './filters'
 
 interface AminoAcidCardProps {
   aminoAcid: AminoAcid
@@ -10,6 +12,7 @@ interface AminoAcidCardProps {
 }
 
 export function AminoAcidCard({ aminoAcid, onOpen, selected, onToggleSelected }: AminoAcidCardProps) {
+  const hydroKind = hydropathyKind(aminoAcid)
   return (
     <li
       className={`aa-card${selected ? ' aa-card--selected' : ''}`}
@@ -21,6 +24,9 @@ export function AminoAcidCard({ aminoAcid, onOpen, selected, onToggleSelected }:
         <span className="aa-card__codes">
           <span>{aminoAcid.code3}</span>
           <span className="aa-card__code1">{aminoAcid.code1}</span>
+        </span>
+        <span className={`aa-card__hydro aa-card__hydro--${hydroKind}`}>
+          {HYDROPATHY_LABELS[hydroKind]} ({formatSigned(aminoAcid.hydropathy, 1)})
         </span>
       </button>
       <button

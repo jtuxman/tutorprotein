@@ -6,7 +6,15 @@ import {
   type Essentiality,
   type LehningerGroup,
 } from '../../data/aminoacids'
-import { CHARGE_LABELS, EMPTY_FILTERS, hasActiveFilters, toggle, type Filters } from './filters'
+import {
+  CHARGE_LABELS,
+  EMPTY_FILTERS,
+  HYDROPATHY_LABELS,
+  hasActiveFilters,
+  toggle,
+  type Filters,
+  type HydropathyKind,
+} from './filters'
 
 interface FilterBarProps {
   filters: Filters
@@ -36,6 +44,7 @@ function Chip({ active, onClick, color, children }: ChipProps) {
 }
 
 const CHARGES: ChargeSign[] = ['positive', 'negative', 'neutral']
+const HYDROPATHIES: HydropathyKind[] = ['hydrophobic', 'hydrophilic']
 const ESSENTIALITIES: Essentiality[] = ['essential', 'conditional', 'nonessential']
 
 export function FilterBar({ filters, onChange, resultCount }: FilterBarProps) {
@@ -77,6 +86,19 @@ export function FilterBar({ filters, onChange, resultCount }: FilterBarProps) {
             onClick={() => set({ charges: toggle(filters.charges, charge) })}
           >
             {CHARGE_LABELS[charge]}
+          </Chip>
+        ))}
+      </div>
+
+      <div className="filter-bar__group" role="group" aria-label="Hidropatía">
+        <span className="filter-bar__title">Hidropatía</span>
+        {HYDROPATHIES.map((kind) => (
+          <Chip
+            key={kind}
+            active={filters.hydropathy.includes(kind)}
+            onClick={() => set({ hydropathy: toggle(filters.hydropathy, kind) })}
+          >
+            {HYDROPATHY_LABELS[kind]}
           </Chip>
         ))}
       </div>
