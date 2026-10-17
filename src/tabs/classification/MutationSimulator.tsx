@@ -3,9 +3,11 @@ import { PHYSIOLOGICAL_PH, chargeSign, netCharge } from '../../chem/charge'
 import { Structure2D } from '../../components/Structure2D'
 import { AMINO_ACIDS, GROUPS, findAminoAcid, type AminoAcid } from '../../data/aminoacids'
 import {
+  BLOSUM_ORDER,
   HBOND_LABELS,
   REAL_WORLD_MUTATIONS,
   analyzeMutation,
+  blosum62Score,
   type RealWorldMutation,
 } from '../../data/blosum62'
 import { formatSigned } from '../../format'
@@ -252,6 +254,73 @@ export function MutationSimulator({ initialFrom, initialTo }: MutationSimulatorP
             </tr>
           </tbody>
         </table>
+      </section>
+
+      <section className="panel" aria-label="Mapa de calor interactivo BLOSUM62">
+        <details className="blosum-heatmap-details">
+          <summary>
+            🗺️ Explorar matriz BLOSUM62 completa (20 × 20 interactiva — toca cualquier par para simularlo)
+          </summary>
+          <p className="panel__caption">
+            Filas = aminoácido original (X), columnas = sustituido (Y). Verde indica sustituciones conservadoras
+            ($\ge +1$), amarillo neutras ($0$ a $-1$) y rojo radicales ($\le -2$).
+          </p>
+          <div className="blosum-heatmap-scroll">
+            <table className="blosum-heatmap" aria-label="Matriz BLOSUM62 20 por 20">
+              <thead>
+                <tr>
+                  <th scope="col">X \ Y</th>
+                  {BLOSUM_ORDER.map((colCode) => (
+                    <th key={colCode} scope="col" title={findAminoAcid(colCode)?.name}>
+                      {colCode}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {BLOSUM_ORDER.map((rowCode) => (
+                  <tr key={rowCode}>
+                    <th scope="row" title={findAminoAcid(rowCode)?.name}>
+                      {rowCode}
+                    </th>
+                    {BLOSUM_ORDER.map((colCode) => {
+                      const score = blosum62Score(rowCode, colCode)
+                      const isActive = from.code1 === rowCode && to.code1 === colCode
+                      const tone =
+                        rowCode === colCode
+                          ? 'diag'
+                          : score >= 1
+                            ? 'pos'
+                            : score >= -1
+                              ? 'mid'
+                              : 'neg'
+                      return (
+                        <td key={colCode}>
+                          <button
+                            type="button"
+                            className={`blosum-cell blosum-cell--${tone}${isActive ? ' blosum-cell--active' : ''}`}
+                            aria-label={`${rowCode} a ${colCode}: ${score}`}
+                            onClick={() => {
+                              const f = findAminoAcid(rowCode)
+                              const t = findAminoAcid(colCode)
+                              if (f && t) {
+                                setFrom(f)
+                                setTo(t)
+                                setActivePreset(null)
+                              }
+                            }}
+                          >
+                            {score}
+                          </button>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
       </section>
     </div>
   )

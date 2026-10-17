@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MolViewer, aminoAcidMolecule } from '../../components/MolViewer'
 import { Structure2D } from '../../components/Structure2D'
 import { AMINO_ACIDS, findAminoAcid } from '../../data/aminoacids'
@@ -8,6 +8,7 @@ import {
   SKILLS,
   currentStreak,
   dueCards,
+  evaluateBadges,
   exportProgressJson,
   importProgressJson,
   recordAttempt,
@@ -47,6 +48,7 @@ export function QuizTab({ startDailyReview = false }: QuizTabProps) {
   const progress = useProgress()
   const due = useMemo(() => dueCards(progress), [progress])
   const streak = useMemo(() => currentStreak(progress), [progress])
+  const badges = useMemo(() => evaluateBadges(progress), [progress])
   const allCodes = useMemo(() => AMINO_ACIDS.map((aa) => aa.code3), [])
 
   const [selectedKinds, setSelectedKinds] = useState<QuestionKind[]>([
@@ -64,7 +66,22 @@ export function QuizTab({ startDailyReview = false }: QuizTabProps) {
   const [chosenId, setChosenId] = useState<string | null>(null)
   const [results, setResults] = useState<SessionResult[]>([])
   const [sessionStreak, setSessionStreak] = useState(0)
+  const [blitzSecondsLeft, setBlitzSecondsLeft] = useState<number | null>(null)
   const [backupMessage, setBackupMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (blitzSecondsLeft === null || blitzSecondsLeft <= 0 || questions === null) return
+    const timer = window.setInterval(() => {
+      setBlitzSecondsLeft((prev) => {
+        if (prev === null || prev <= 1) {
+          setCurrentIndex(questions.length)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [blitzSecondsLeft, questions])
 
   const toggleKind = (kind: QuestionKind) => {
     setSelectedKinds((prev) => {
@@ -75,20 +92,31 @@ export function QuizTab({ startDailyReview = false }: QuizTabProps) {
     })
   }
 
-  const startSession = (list: QuizQuestion[]) => {
+  const startSession = (list: QuizQuestion[], blitzSeconds: number | null = null) => {
     setQuestions(list)
     setCurrentIndex(0)
     setChosenId(null)
     setResults([])
     setSessionStreak(0)
+    setBlitzSecondsLeft(blitzSeconds)
   }
 
   const handleStartConfigured = () => {
-    startSession(generateSessionQuestions({ count: questionCount, kinds: selectedKinds }))
+    startSession(generateSessionQuestions({ count: questionCount, kinds: selectedKinds }), null)
+  }
+
+  const handleStartBlitz = () => {
+    startSession(
+      generateSessionQuestions({
+        count: 25,
+        kinds: ['2d-to-name', 'properties', 'surface-profile', 'name-to-2d'],
+      }),
+      60,
+    )
   }
 
   const handleStartDaily = () => {
-    startSession(generateDailyReviewQuestions(due, 8))
+    startSession(generateDailyReviewQuestions(due, 8), null)
   }
 
   const handleRetryMistakes = () => {
@@ -213,12 +241,24 @@ export function QuizTab({ startDailyReview = false }: QuizTabProps) {
     return (
       <article className="quiz-tab">
         <header className="quiz-session-bar" aria-label="Estado de la sesión">
-          <button type="button" className="pill-button" onClick={() => setQuestions(null)}>
+          <button
+            type="button"
+            className="pill-button"
+            onClick={() => {
+              setBlitzSecondsLeft(null)
+              setQuestions(null)
+            }}
+          >
             ← Salir
           </button>
           <span className="quiz-session-bar__progress">
             Pregunta <strong>{currentIndex + 1}</strong> de <strong>{questions.length}</strong>
           </span>
+          {blitzSecondsLeft !== null && (
+            <span className="quiz-session-bar__timer" role="timer" aria-label="Tiempo restante de ráfaga">
+              ⏱️ <strong>{blitzSecondsLeft} s</strong>
+            </span>
+          )}
           <span className="quiz-session-bar__streak" aria-label="Racha de aciertos en la sesión">
             🔥 Racha: <strong>{sessionStreak}</strong>
           </span>
@@ -424,9 +464,35 @@ export function QuizTab({ startDailyReview = false }: QuizTabProps) {
               </button>
             ))}
           </div>
-          <button type="button" className="pill-button pill-button--primary" onClick={handleStartConfigured}>
-            🎯 Empezar quiz ({questionCount} preguntas)
-          </button>
+          <div className="quiz-config-actions">
+            <button type="button" className="pill-button" onClick={handleStartBlitz}>
+              ⚡ Modo Ráfaga 60 s
+            </button>
+            <button type="button" className="pill-button pill-button--primary" onClick={handleStartConfigured}>
+              🎯 Empezar quiz ({questionCount} preguntas)
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel" aria-label="Insignias de AminoLab">
+        <h3>🏅 Insignias y logros ({badges.filter((b) => b.unlocked).length} de {badges.length})</h3>
+        <div className="badge-grid">
+          {badges.map((badge) => (
+            <div
+              key={badge.id}
+              className={`badge-card${badge.unlocked ? ' badge-card--unlocked' : ''}`}
+            >
+              <span className="badge-card__icon" aria-hidden="true">
+                {badge.icon}
+              </span>
+              <div className="badge-card__body">
+                <strong>{badge.title}</strong>
+                <span>{badge.description}</span>
+                <small>{badge.unlocked ? '✨ Desbloqueada' : badge.progressText}</small>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

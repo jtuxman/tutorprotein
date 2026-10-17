@@ -182,6 +182,23 @@ function TitrationChart({ aminoAcid, pH, onSelectPh }: TitrationChartProps) {
         Equivalentes de OH⁻ añadidos
       </text>
 
+      {/* Bandas de amortiguamiento (pKa ± 1) */}
+      {pkaMarkers.map((marker) => {
+        const yTop = yForPh(Math.min(14, marker.pKa + 1))
+        const yBot = yForPh(Math.max(0, marker.pKa - 1))
+        return (
+          <rect
+            key={`buf-${marker.tag}`}
+            x={padLeft}
+            y={yTop}
+            width={plotW}
+            height={Math.max(2, yBot - yTop)}
+            fill="#fef3c7"
+            opacity="0.55"
+          />
+        )
+      })}
+
       {/* Línea horizontal del pH actual */}
       <line
         x1={padLeft}
@@ -226,6 +243,87 @@ function TitrationChart({ aminoAcid, pH, onSelectPh }: TitrationChartProps) {
       {/* Posición actual del deslizador */}
       <circle cx={currentPoint.x} cy={currentPoint.y} r="7" fill="#ec4899" stroke="#fff" strokeWidth="2" />
     </svg>
+  )
+}
+
+function ElectrophoresisStrip({ aminoAcid, pH }: { aminoAcid: AminoAcid; pH: number }) {
+  const asp = AMINO_ACIDS.find((aa) => aa.code3 === 'Asp')!
+  const lys = AMINO_ACIDS.find((aa) => aa.code3 === 'Lys')!
+
+  const lanes = [
+    { aa: aminoAcid, primary: true },
+    { aa: asp, primary: false },
+    { aa: lys, primary: false },
+  ]
+
+  // Si la carga es positiva (+), migra hacia el cátodo (−, izquierda).
+  // Si la carga es negativa (−), migra hacia el ánodo (+, derecha).
+  const positionPercent = (charge: number) => {
+    const clamped = Math.max(-2, Math.min(2, charge))
+    return 50 - clamped * 22
+  }
+
+  return (
+    <section className="panel electrophoresis-panel" aria-label="Simulador de electroforesis en papel">
+      <div className="electrophoresis-header">
+        <div>
+          <h3>⚡ Electroforesis en papel a pH {pH.toFixed(2)}</h3>
+          <p className="panel__caption">
+            En un campo eléctrico, los cationes (+) migran hacia el <strong>cátodo (−)</strong>, los aniones (−) hacia
+            el <strong>ánodo (+)</strong> y un aminoácido en su <strong>pI</strong> no se desplaza del origen.
+          </p>
+        </div>
+        <span className="ph-badge">
+          {Math.abs(netCharge(aminoAcid, pH)) < 0.08
+            ? 'En su punto isoeléctrico (no migra)'
+            : netCharge(aminoAcid, pH) > 0
+              ? 'Migra al cátodo (−)'
+              : 'Migra al ánodo (+)'}
+        </span>
+      </div>
+
+      <div className="electro-strip" role="img" aria-label={`Tira de electroforesis a pH ${pH.toFixed(1)}`}>
+        <div className="electro-pole electro-pole--cathode">
+          <strong>− Cátodo</strong>
+          <span>Atrae cargas +</span>
+        </div>
+
+        <div className="electro-lanes">
+          <div className="electro-origin-line" aria-hidden="true">
+            <span>Origen (0)</span>
+          </div>
+          {lanes.map(({ aa, primary }) => {
+            const q = netCharge(aa, pH)
+            const left = positionPercent(q)
+            return (
+              <div key={aa.code3} className={`electro-lane${primary ? ' electro-lane--primary' : ''}`}>
+                <span className="electro-lane__label">
+                  {aa.code3} {primary ? '(seleccionado)' : '(testigo)'}
+                </span>
+                <div className="electro-lane__track">
+                  <span
+                    className="electro-spot"
+                    style={
+                      {
+                        left: `${left}%`,
+                        '--spot-color': `var(${GROUPS[aa.group].cssVar})`,
+                      } as React.CSSProperties
+                    }
+                  >
+                    {aa.code3} ({formatSigned(q, 2)})
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="electro-pole electro-pole--anode">
+          <strong>+ Ánodo</strong>
+          <span>Atrae cargas −</span>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -373,19 +471,42 @@ export function PhSimulator({ initialAminoAcid }: PhSimulatorProps) {
                   </span>
                   <span>Aporte de carga: {formatSigned(item.charge, 2)}</span>
                 </div>
+                <div className="microspecies-bar" aria-hidden="true">
+                  <span
+                    className="microspecies-bar__prot"
+                    style={{ width: `${Math.round(item.protonatedFraction * 100)}%` }}
+                  />
+                </div>
               </li>
             ))}
           </ul>
         </section>
 
         <section className="panel" aria-label="Curva de titulación">
-          <h3>Curva de titulación</h3>
+          <h3>Curva de titulación y zonas tampón</h3>
           <TitrationChart aminoAcid={aminoAcid} pH={pH} onSelectPh={setPh} />
           <p className="panel__caption">
-            Toca cualquier punto pKa (naranja) o el pI (verde) para llevar el deslizador a ese pH.
+            Las franjas amarillas marcan las <strong>zonas de amortiguamiento (pKa ± 1)</strong>. Toca cualquier pKa o
+            el pI para saltar a ese pH.
           </p>
+          {groups.some((g) => Math.abs(pH - g.group.pKa) <= 1) ? (
+            <p className="buffer-status buffer-status--active">
+              🛡️ <strong>Zona tampón activa:</strong> a pH {pH.toFixed(2)} el grupo{' '}
+              {groups
+                .filter((g) => Math.abs(pH - g.group.pKa) <= 1)
+                .map((g) => g.label)
+                .join(' y ')}{' '}
+              amortigua cambios de pH.
+            </p>
+          ) : (
+            <p className="buffer-status">
+              Fuera de zona tampón (ningún pKa está a menos de 1 unidad del pH actual).
+            </p>
+          )}
         </section>
       </div>
+
+      <ElectrophoresisStrip aminoAcid={aminoAcid} pH={pH} />
 
       <section className="panel" aria-label="Nube de carga en 3D">
         <h3>Nube de carga en 3D a pH {pH.toFixed(1)}</h3>

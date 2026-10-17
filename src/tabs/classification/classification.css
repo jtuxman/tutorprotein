@@ -1042,3 +1042,198 @@
   line-height: 1.5;
 }
 
+.microspecies-bar {
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: #fee2e2;
+  overflow: hidden;
+}
+
+.microspecies-bar__prot {
+  display: block;
+  height: 100%;
+  background: #3b82f6;
+}
+
+.buffer-status {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f3e8ff;
+  font-size: 0.88rem;
+}
+
+.buffer-status--active {
+  background: #fef3c7;
+  color: #78350f;
+}
+
+.electrophoresis-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.electro-strip {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 92px;
+  gap: 8px;
+  align-items: stretch;
+  padding: 10px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 2px solid var(--color-primary-soft);
+}
+
+.electro-pole {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 6px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+.electro-pole--cathode {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.electro-pole--anode {
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+
+.electro-lanes {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 8px 8px;
+}
+
+.electro-origin-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 2px dashed #94a3b8;
+  pointer-events: none;
+}
+
+.electro-origin-line span {
+  position: absolute;
+  top: 0;
+  left: 4px;
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.electro-lane {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.electro-lane__label {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.electro-lane__track {
+  position: relative;
+  height: 28px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.electro-spot {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--spot-color, var(--color-primary));
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: left 0.2s ease;
+}
+
+.mystery-clues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.blosum-heatmap-details summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+.blosum-heatmap-scroll {
+  overflow-x: auto;
+  margin-top: 8px;
+}
+
+.blosum-heatmap {
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  margin: 0 auto;
+}
+
+.blosum-heatmap th,
+.blosum-heatmap td {
+  padding: 2px;
+  text-align: center;
+}
+
+.blosum-cell {
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.blosum-cell--diag {
+  background: #ddd6fe;
+  color: #4c1d95;
+}
+
+.blosum-cell--pos {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.blosum-cell--mid {
+  background: #fef3c7;
+  color: #78350f;
+}
+
+.blosum-cell--neg {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.blosum-cell--active {
+  outline: 2px solid #1f1638;
+  font-weight: 900;
+}
+
+

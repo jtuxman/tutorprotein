@@ -338,3 +338,60 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.quiz-config-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quiz-session-bar__timer {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 800;
+}
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.badge-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #faf7ff;
+  border: 2px dashed var(--color-primary-soft);
+  opacity: 0.72;
+}
+
+.badge-card--unlocked {
+  border-style: solid;
+  border-color: #f59e0b;
+  background: #fffbeb;
+  opacity: 1;
+}
+
+.badge-card__icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.badge-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.badge-card__body small {
+  color: var(--color-primary);
+  font-weight: 800;
+}
+

@@ -7,9 +7,10 @@ import {
   SIDE_CHAIN_RECIPES,
   validateBuiltStructure,
 } from '../../data/fragments'
+import { TRIVIA } from '../../data/trivia'
 import { recordAttempt } from '../../progress'
 
-type BuilderMode = 'assemble' | 'draw'
+type BuilderMode = 'assemble' | 'mystery' | 'draw'
 
 export interface StructureBuilderProps {
   initialAminoAcid?: AminoAcid
@@ -71,7 +72,16 @@ export function StructureBuilder({ initialAminoAcid }: StructureBuilderProps) {
 
   const handleCheckAssemble = () => {
     const validation = validateBuiltStructure(target, placed)
-    setCheckedMessage({ matches: validation.matches, text: validation.feedback })
+    if (mode === 'mystery' && !validation.matches) {
+      setCheckedMessage({
+        matches: false,
+        text: validation.matchedAminoAcid
+          ? `Has armado ${validation.matchedAminoAcid.name} (${validation.matchedAminoAcid.code3}), pero las pistas corresponden a otro aminoácido.`
+          : 'Esa combinación no coincide todavía con el aminoácido misterioso. Revisa las pistas o usa «Ver pista».',
+      })
+    } else {
+      setCheckedMessage({ matches: validation.matches, text: validation.feedback })
+    }
     const elapsed = startTimeRef.current > 0 ? Date.now() - startTimeRef.current : 2000
     recordAttempt({
       aminoAcid: target.code3,
@@ -166,6 +176,17 @@ export function StructureBuilder({ initialAminoAcid }: StructureBuilderProps) {
             <button
               type="button"
               className="chip"
+              aria-pressed={mode === 'mystery'}
+              onClick={() => {
+                setMode('mystery')
+                setCheckedMessage(null)
+              }}
+            >
+              🕵️ Reto a ciegas («¿Quién soy?»)
+            </button>
+            <button
+              type="button"
+              className="chip"
               aria-pressed={mode === 'draw'}
               onClick={() => setMode('draw')}
             >
@@ -173,40 +194,60 @@ export function StructureBuilder({ initialAminoAcid }: StructureBuilderProps) {
             </button>
           </div>
 
-          <label className="compare__select">
-            <span className="filter-bar__label">Aminoácido a construir</span>
-            <select
-              aria-label="Aminoácido a construir"
-              value={target.code3}
-              onChange={(event) => {
-                const next = AMINO_ACIDS.find((aa) => aa.code3 === event.target.value)
-                if (next) changeTarget(next)
-              }}
-            >
-              {AMINO_ACIDS.map((aa) => (
-                <option key={aa.code3} value={aa.code3}>
-                  {aa.name} ({aa.code3} · {aa.code1}) — {GROUPS[aa.group].label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {mode !== 'mystery' && (
+            <label className="compare__select">
+              <span className="filter-bar__label">Aminoácido a construir</span>
+              <select
+                aria-label="Aminoácido a construir"
+                value={target.code3}
+                onChange={(event) => {
+                  const next = AMINO_ACIDS.find((aa) => aa.code3 === event.target.value)
+                  if (next) changeTarget(next)
+                }}
+              >
+                {AMINO_ACIDS.map((aa) => (
+                  <option key={aa.code3} value={aa.code3}>
+                    {aa.name} ({aa.code3} · {aa.code1}) — {GROUPS[aa.group].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <button type="button" className="pill-button" onClick={pickRandomTarget}>
-            🎲 Otro al azar
+            🎲 {mode === 'mystery' ? 'Nuevo aminoácido secreto' : 'Otro al azar'}
           </button>
         </div>
       </section>
 
-      {mode === 'assemble' ? (
+      {mode === 'assemble' || mode === 'mystery' ? (
         <div className="aa-detail__structures">
           <section className="panel" aria-label="Núcleo y cadena lateral armada">
-            <h3>
-              Construye: {target.name} ({target.code3} · {target.code1})
-            </h3>
-            <p className="panel__caption">
-              Grupo: <strong>{GROUPS[target.group].label}</strong>. El núcleo <code>H₂N–CαH–COOH</code> está fijo;
-              arrastra o toca los fragmentos en orden desde el Cα hasta el extremo de la cadena lateral.
-            </p>
+            {mode === 'mystery' && !checkedMessage?.matches ? (
+              <>
+                <h3>🕵️ Aminoácido misterioso: arma su cadena lateral</h3>
+                <div className="mystery-clues" aria-label="Pistas del aminoácido misterioso">
+                  <span className="chip">Grupo: {GROUPS[target.group].label}</span>
+                  <span className="chip">Masa: {target.molecularWeight} g/mol</span>
+                  <span className="chip">pI: {target.pI.toFixed(2)}</span>
+                  <span className="chip">Hidropatía: {target.hydropathy}</span>
+                  <span className="chip">Fragmentos necesarios: {recipe.length}</span>
+                </div>
+                <p className="panel__caption">
+                  Pista funcional: <em>{target.note}</em>
+                </p>
+              </>
+            ) : (
+              <>
+                <h3>
+                  Construye: {target.name} ({target.code3} · {target.code1})
+                </h3>
+                <p className="panel__caption">
+                  Grupo: <strong>{GROUPS[target.group].label}</strong>. El núcleo <code>H₂N–CαH–COOH</code> está fijo;
+                  arrastra o toca los fragmentos en orden desde el Cα hasta el extremo de la cadena lateral.
+                </p>
+              </>
+            )}
 
             <div
               className="builder-dropzone"
@@ -273,8 +314,18 @@ export function StructureBuilder({ initialAminoAcid }: StructureBuilderProps) {
 
             {showHint && (
               <p className="builder-hint" role="note">
-                Pista para {target.name}: necesita <strong>{recipe.length}</strong>{' '}
-                {recipe.length === 1 ? 'fragmento' : 'fragmentos'} ({target.note})
+                {mode === 'mystery' ? (
+                  <>
+                    Primer fragmento desde el Cα:{' '}
+                    <strong>{FRAGMENT_BY_ID[recipe[0]]?.formula ?? recipe[0]}</strong> · Curiosidad:{' '}
+                    {TRIVIA[target.code3]?.realLife}
+                  </>
+                ) : (
+                  <>
+                    Pista para {target.name}: necesita <strong>{recipe.length}</strong>{' '}
+                    {recipe.length === 1 ? 'fragmento' : 'fragmentos'} ({target.note})
+                  </>
+                )}
               </p>
             )}
 

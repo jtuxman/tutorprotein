@@ -357,3 +357,75 @@ export function importProgressJson(raw: string): ProgressState {
   saveProgress(parsed)
   return parsed
 }
+
+export interface BadgeInfo {
+  id: string
+  icon: string
+  title: string
+  description: string
+  unlocked: boolean
+  progressText: string
+}
+
+/** Calcula las insignias desbloqueadas y su progreso actual a partir del estado. */
+export function evaluateBadges(state: ProgressState, todayKey: string = toDateKey()): BadgeInfo[] {
+  const totalCorrect = state.attempts.filter((a) => a.correct).length
+  const distinctAminoAcids = new Set(state.attempts.filter((a) => a.correct).map((a) => a.aminoAcid)).size
+  const chemCorrect = state.attempts.filter((a) => a.skill === 'chemistry' && a.correct).length
+  const struct2dCorrect = state.attempts.filter((a) => a.skill === 'structure2d' && a.correct).length
+  const struct3dCorrect = state.attempts.filter((a) => a.skill === 'structure3d' && a.correct).length
+  const streak = currentStreak(state, todayKey)
+  const highBoxCount = Object.values(state.cards).filter((c) => c.box >= 3).length
+
+  return [
+    {
+      id: 'first-step',
+      icon: '🌱',
+      title: 'Primer enlace',
+      description: 'Logra tu primer acierto en cualquier pregunta o constructor.',
+      unlocked: totalCorrect >= 1,
+      progressText: `${Math.min(1, totalCorrect)}/1 acierto`,
+    },
+    {
+      id: 'ph-alchemist',
+      icon: '⚗️',
+      title: 'Alquimista del pH',
+      description: 'Acierta 5 preguntas de química ácido-base, carga o pI.',
+      unlocked: chemCorrect >= 5,
+      progressText: `${Math.min(5, chemCorrect)}/5 aciertos`,
+    },
+    {
+      id: 'architect-2d',
+      icon: '🧩',
+      title: 'Arquitecto 2D',
+      description: 'Acierta 8 retos de estructura 2D o del constructor por fragmentos.',
+      unlocked: struct2dCorrect >= 8,
+      progressText: `${Math.min(8, struct2dCorrect)}/8 aciertos`,
+    },
+    {
+      id: 'eye-3d',
+      icon: '🔮',
+      title: 'Ojo cristalográfico',
+      description: 'Identifica 5 aminoácidos en 3D sin pistas (modo anti-spoiler).',
+      unlocked: struct3dCorrect >= 5,
+      progressText: `${Math.min(5, struct3dCorrect)}/5 aciertos`,
+    },
+    {
+      id: 'collector-20',
+      icon: '🧬',
+      title: 'Domador de los 20',
+      description: 'Acierta al menos una vez cada uno de los 20 aminoácidos estándar.',
+      unlocked: distinctAminoAcids >= 20,
+      progressText: `${distinctAminoAcids}/20 aminoácidos`,
+    },
+    {
+      id: 'leitner-vault',
+      icon: '📦',
+      title: 'Memoria a largo plazo',
+      description: 'Lleva 5 tarjetas a la caja 3 o superior del sistema Leitner o mantén 3 días de racha.',
+      unlocked: highBoxCount >= 5 || streak >= 3,
+      progressText: `${highBoxCount}/5 cajas ≥3 · racha ${streak}d`,
+    },
+  ]
+}
+

@@ -41,4 +41,11 @@ describe('QuizTab', () => {
     render(<QuizTab />)
     expect(screen.getByText(/Tienes 1 tarjeta lista para repasar hoy/)).toBeInTheDocument()
   })
+
+  it('muestra las insignias y permite iniciar el modo Ráfaga de 60 segundos', () => {
+    render(<QuizTab />)
+    expect(screen.getByRole('heading', { name: /Insignias y logros/ })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Modo Ráfaga 60 s/ }))
+    expect(screen.getByRole('timer')).toHaveTextContent('60 s')
+  })
 })

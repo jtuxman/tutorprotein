@@ -93,4 +93,15 @@ describe('progress engine', () => {
     expect(imported.cards['His:properties']?.correct).toBe(1)
     expect(() => importProgressJson('{"version":99}')).toThrow()
   })
+
+  it('desbloquea insignias al acertar preguntas', () => {
+    recordAttempt({
+      aminoAcid: 'Ala',
+      skill: 'chemistry',
+      correct: true,
+      responseMs: 1000,
+    })
+    const state = loadProgress()
+    expect(state.attempts).toHaveLength(1)
+  })
 })
