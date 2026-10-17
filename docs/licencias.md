@@ -8,6 +8,7 @@ Antes de incluir cualquier biblioteca o dataset externo se verifica que su licen
 | **SmilesDrawer** 2.4.1 | Estructuras 2D a partir de SMILES | MIT | Archivo `LICENSE.md` del paquete npm `smiles-drawer` · https://github.com/reymond-group/smilesDrawer/blob/master/LICENSE.md |
 | **Chemical Component Dictionary** (wwPDB) | Coordenadas ideales y nombres de átomo de los 20 aminoácidos (`public/structures/`) | CC0 1.0 Universal | https://www.wwpdb.org/about/usage-policies · https://www.rcsb.org/pages/usage-policy |
 | **Lehninger Principles of Biochemistry**, 8.ª ed. (Nelson & Cox, 2021), Tabla 3-1 | Valores numéricos de `src/data/aminoacids.ts` (Mr, pKa, pI, índice de hidropatía) | Datos fácticos, citados; no se reproduce texto ni la tabla como tal | — |
+| **Matriz de sustitución BLOSUM62** (Henikoff & Henikoff, *PNAS* 89:10915–10919, 1992) | Simulador de mutaciones (`src/data/blosum62.ts`) | Dominio público (distribuida por el NCBI como obra del Gobierno de EE. UU. / datos fácticos publicados) | https://ftp.ncbi.nih.gov/blast/matrices/BLOSUM62 |
 
 Fecha de verificación: 2026-10-12.
 

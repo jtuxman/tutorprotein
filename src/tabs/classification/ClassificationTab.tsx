@@ -4,13 +4,22 @@ import { AminoAcidCard } from './AminoAcidCard'
 import { AminoAcidDetail } from './AminoAcidDetail'
 import { CompareView } from './CompareView'
 import { FilterBar } from './FilterBar'
+import { MutationSimulator } from './MutationSimulator'
+import { PhSimulator } from './PhSimulator'
+import { StructureBuilder } from './StructureBuilder'
 import { EMPTY_FILTERS, applyFilters, toggle, type Filters } from './filters'
 import './classification.css'
 
-type View = { kind: 'list' } | { kind: 'detail'; code: string } | { kind: 'compare'; first: string; second: string }
+type Section = 'catalog' | 'ph' | 'builder' | 'mutations'
+type CatalogView =
+  | { kind: 'list' }
+  | { kind: 'detail'; code: string }
+  | { kind: 'compare'; first: string; second: string }
 
 export function ClassificationTab() {
-  const [view, setView] = useState<View>({ kind: 'list' })
+  const [section, setSection] = useState<Section>('catalog')
+  const [view, setView] = useState<CatalogView>({ kind: 'list' })
+  const [toolAminoAcid, setToolAminoAcid] = useState<AminoAcid | undefined>(undefined)
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
   const visible = useMemo(() => applyFilters(AMINO_ACIDS, filters), [filters])
 
@@ -18,7 +27,8 @@ export function ClassificationTab() {
   const [selection, setSelection] = useState<string[]>([])
   const selected = selection.map((code) => findAminoAcid(code)).filter((aa) => aa !== undefined)
 
-  const show = (next: View) => {
+  const show = (next: CatalogView) => {
+    setSection('catalog')
     setView(next)
     window.scrollTo?.({ top: 0 })
   }
@@ -33,10 +43,104 @@ export function ClassificationTab() {
     // Con dos ya elegidas, una tercera sustituye a la más antigua.
     setSelection((codes) => toggle(codes, aminoAcid.code3).slice(-2))
 
+  const openPhFor = (aminoAcid: AminoAcid) => {
+    setToolAminoAcid(aminoAcid)
+    setSection('ph')
+    window.scrollTo?.({ top: 0 })
+  }
+
+  const openBuilderFor = (aminoAcid: AminoAcid) => {
+    setToolAminoAcid(aminoAcid)
+    setSection('builder')
+    window.scrollTo?.({ top: 0 })
+  }
+
+  const switchSection = (next: Section) => {
+    setSection(next)
+    if (next === 'catalog') setView({ kind: 'list' })
+    window.scrollTo?.({ top: 0 })
+  }
+
+  const subnav = (
+    <nav className="subtab-bar" aria-label="Herramientas de Clasificación y Química">
+      <button
+        type="button"
+        className="chip"
+        aria-pressed={section === 'catalog'}
+        onClick={() => switchSection('catalog')}
+      >
+        🧪 Catálogo (20)
+      </button>
+      <button
+        type="button"
+        className="chip"
+        aria-pressed={section === 'ph'}
+        onClick={() => switchSection('ph')}
+      >
+        ⚗️ Simulador de pH y pI
+      </button>
+      <button
+        type="button"
+        className="chip"
+        aria-pressed={section === 'builder'}
+        onClick={() => switchSection('builder')}
+      >
+        🧩 Constructor 2D
+      </button>
+      <button
+        type="button"
+        className="chip"
+        aria-pressed={section === 'mutations'}
+        onClick={() => switchSection('mutations')}
+      >
+        🧬 Mutaciones (BLOSUM62)
+      </button>
+    </nav>
+  )
+
+  if (section === 'ph') {
+    return (
+      <div className="classification">
+        {subnav}
+        <PhSimulator key={toolAminoAcid?.code3 ?? 'default'} initialAminoAcid={toolAminoAcid} />
+      </div>
+    )
+  }
+
+  if (section === 'builder') {
+    return (
+      <div className="classification">
+        {subnav}
+        <StructureBuilder key={toolAminoAcid?.code3 ?? 'default'} initialAminoAcid={toolAminoAcid} />
+      </div>
+    )
+  }
+
+  if (section === 'mutations') {
+    return (
+      <div className="classification">
+        {subnav}
+        <MutationSimulator />
+      </div>
+    )
+  }
+
   if (view.kind === 'detail') {
     const aminoAcid = findAminoAcid(view.code)
     if (aminoAcid) {
-      return <AminoAcidDetail aminoAcid={aminoAcid} onBack={backToList} onNavigate={open} onCompare={compare} />
+      return (
+        <div className="classification">
+          {subnav}
+          <AminoAcidDetail
+            aminoAcid={aminoAcid}
+            onBack={backToList}
+            onNavigate={open}
+            onCompare={compare}
+            onOpenPhSimulator={openPhFor}
+            onOpenBuilder={openBuilderFor}
+          />
+        </div>
+      )
     }
   }
 
@@ -44,17 +148,24 @@ export function ClassificationTab() {
     const first = findAminoAcid(view.first)
     const second = findAminoAcid(view.second)
     if (first && second) {
-      return <CompareView first={first} second={second} onChange={compare} onBack={backToList} onOpen={open} />
+      return (
+        <div className="classification">
+          {subnav}
+          <CompareView first={first} second={second} onChange={compare} onBack={backToList} onOpen={open} />
+        </div>
+      )
     }
   }
 
   return (
     <div className={selected.length > 0 ? 'classification classification--comparing' : 'classification'}>
+      {subnav}
       <header className="classification__intro">
         <h2>Los 20 aminoácidos</h2>
         <p>
           Agrupados según la química de su cadena lateral (clasificación de Lehninger). Toca una tarjeta para ver su
-          ficha con estructura 2D, modelo 3D y propiedades, o marca dos con ⚖️ para compararlas lado a lado.
+          ficha con estructura 2D, modelo 3D, propiedades y mnemotecnia, o marca dos con ⚖️ para compararlas lado a
+          lado.
         </p>
       </header>
 

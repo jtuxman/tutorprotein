@@ -1,6 +1,7 @@
 import { MolViewer, aminoAcidMolecule } from '../../components/MolViewer'
 import { Structure2D } from '../../components/Structure2D'
 import { AMINO_ACIDS, GROUPS, type AminoAcid } from '../../data/aminoacids'
+import { TRIVIA } from '../../data/trivia'
 import { GroupBadge } from './GroupBadge'
 import { PROPERTIES } from './properties'
 
@@ -9,12 +10,22 @@ interface AminoAcidDetailProps {
   onBack: () => void
   onNavigate: (aminoAcid: AminoAcid) => void
   onCompare: (first: AminoAcid, second: AminoAcid) => void
+  onOpenPhSimulator?: (aminoAcid: AminoAcid) => void
+  onOpenBuilder?: (aminoAcid: AminoAcid) => void
 }
 
-export function AminoAcidDetail({ aminoAcid, onBack, onNavigate, onCompare }: AminoAcidDetailProps) {
+export function AminoAcidDetail({
+  aminoAcid,
+  onBack,
+  onNavigate,
+  onCompare,
+  onOpenPhSimulator,
+  onOpenBuilder,
+}: AminoAcidDetailProps) {
   const index = AMINO_ACIDS.indexOf(aminoAcid)
   const previous = AMINO_ACIDS[(index - 1 + AMINO_ACIDS.length) % AMINO_ACIDS.length]
   const next = AMINO_ACIDS[(index + 1) % AMINO_ACIDS.length]
+  const trivia = TRIVIA[aminoAcid.code3]
 
   return (
     <article
@@ -50,23 +61,35 @@ export function AminoAcidDetail({ aminoAcid, onBack, onNavigate, onCompare }: Am
       </header>
       <p className="aa-detail__note">{aminoAcid.note}</p>
 
-      <label className="aa-detail__compare">
-        <span aria-hidden="true">⚖️</span> Comparar con
-        <select
-          value=""
-          onChange={(event) => {
-            const other = AMINO_ACIDS.find((aa) => aa.code3 === event.target.value)
-            if (other) onCompare(aminoAcid, other)
-          }}
-        >
-          <option value="">Elige otro aminoácido…</option>
-          {AMINO_ACIDS.filter((aa) => aa !== aminoAcid).map((aa) => (
-            <option key={aa.code3} value={aa.code3}>
-              {aa.name} ({aa.code3})
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="aa-detail__actions">
+        <label className="aa-detail__compare">
+          <span aria-hidden="true">⚖️</span> Comparar con
+          <select
+            value=""
+            onChange={(event) => {
+              const other = AMINO_ACIDS.find((aa) => aa.code3 === event.target.value)
+              if (other) onCompare(aminoAcid, other)
+            }}
+          >
+            <option value="">Elige otro aminoácido…</option>
+            {AMINO_ACIDS.filter((aa) => aa !== aminoAcid).map((aa) => (
+              <option key={aa.code3} value={aa.code3}>
+                {aa.name} ({aa.code3})
+              </option>
+            ))}
+          </select>
+        </label>
+        {onOpenPhSimulator && (
+          <button type="button" className="pill-button" onClick={() => onOpenPhSimulator(aminoAcid)}>
+            ⚗️ Simular pH y pI
+          </button>
+        )}
+        {onOpenBuilder && (
+          <button type="button" className="pill-button" onClick={() => onOpenBuilder(aminoAcid)}>
+            🧩 Construir estructura
+          </button>
+        )}
+      </div>
 
       <div className="aa-detail__structures">
         <section className="panel" aria-label="Estructura 2D">
@@ -93,6 +116,26 @@ export function AminoAcidDetail({ aminoAcid, onBack, onNavigate, onCompare }: Am
           </tbody>
         </table>
       </section>
+
+      {trivia && (
+        <section className="panel trivia-panel" aria-label="Mnemotecnia y datos curiosos">
+          <h3>Mnemotecnia y curiosidades</h3>
+          <dl className="trivia-list">
+            <div className="trivia-item">
+              <dt>🧠 Truco para recordarlo</dt>
+              <dd>{trivia.mnemonic}</dd>
+            </div>
+            <div className="trivia-item">
+              <dt>📖 Origen del nombre</dt>
+              <dd>{trivia.etymology}</dd>
+            </div>
+            <div className="trivia-item">
+              <dt>🌍 En la vida real y la clínica</dt>
+              <dd>{trivia.realLife}</dd>
+            </div>
+          </dl>
+        </section>
+      )}
     </article>
   )
 }

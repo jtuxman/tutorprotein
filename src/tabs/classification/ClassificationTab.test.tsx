@@ -89,4 +89,18 @@ describe('ClassificationTab', () => {
       'Ácido glutámico',
     ])
   })
+
+  it('navega a las herramientas de la Fase 2 (simulador de pH, constructor y mutaciones)', () => {
+    render(<ClassificationTab />)
+    fireEvent.click(screen.getByRole('button', { name: /Simulador de pH y pI/ }))
+    expect(screen.getByRole('heading', { name: /Simulador de pH y punto isoeléctrico/ })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /Curva de titulación/ })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Constructor 2D/ }))
+    expect(screen.getByRole('heading', { name: 'Constructor de estructuras' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Mutaciones \(BLOSUM62\)/ }))
+    expect(screen.getByRole('heading', { name: /Simulador de mutaciones/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Anemia falciforme/ })).toBeInTheDocument()
+  })
 })
