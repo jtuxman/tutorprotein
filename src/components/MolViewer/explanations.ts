@@ -9,6 +9,10 @@ export interface Explanation {
 }
 
 export const REPRESENTATIONS: Record<Representation, Explanation> = {
+  cartoon: {
+    label: 'Cintas (cartoon)',
+    text: 'Sigue el esqueleto de la proteína como una cinta suave: las hélices α se ven como espirales y las láminas β como flechas anchas.',
+  },
   ballstick: {
     label: 'Bolas y varillas',
     text: 'Cada átomo es una bola y cada enlace una varilla. Es la vista más clara para contar átomos y seguir quién está unido a quién.',
@@ -51,6 +55,22 @@ export const COLOR_MODES: Record<ColorMode, Explanation> = {
   charge: {
     label: 'Carga a pH 7',
     text: 'Rojo donde habría carga negativa y azul donde habría carga positiva a pH 7; cuanto más intenso, más cerca de una carga completa. La estructura se dibuja neutra: el color solo indica qué grupos se ionizarían.',
+  },
+  ss: {
+    label: 'Estructura secundaria',
+    text: 'Colorea las hélices α en magenta, las láminas β en amarillo dorado y los bucles o giros en gris suave.',
+  },
+  rainbow: {
+    label: 'Arcoíris N → C',
+    text: 'Va del extremo N-terminal (azul) al C-terminal (rojo) para seguir de un vistazo el recorrido de la cadena polipeptídica.',
+  },
+  chain: {
+    label: 'Por cadena',
+    text: 'Asigna un color distinto a cada subunidad o cadena polipeptídica del complejo.',
+  },
+  bfactor: {
+    label: 'Factor B (movilidad)',
+    text: 'Del azul (regiones rígidas y bien definidas) al rojo (zonas más móviles o con mayor incertidumbre cristalográfica).',
   },
 }
 

@@ -63,7 +63,7 @@ export const SKILL_ORDER: SkillId[] = [
 ]
 
 /** Habilidades que ya se practican en las fases 1–3. */
-export const CORE_SKILLS: SkillId[] = ['structure2d', 'structure3d', 'properties', 'chemistry']
+export const CORE_SKILLS: SkillId[] = ['structure2d', 'structure3d', 'properties', 'chemistry', 'protein']
 
 export interface AttemptRecord {
   /** Código de 3 letras ('Ala', 'Lys'…). */

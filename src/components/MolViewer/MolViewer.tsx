@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AtomSpec, GLViewer } from '3dmol'
-import { PHYSIOLOGICAL_PH } from '../../chem/charge'
-import { ccdCode } from '../../data/aminoacids'
+import { PHYSIOLOGICAL_PH, netCharge } from '../../chem/charge'
+import { isSideChainOrGlyCa, residueKey } from '../../chem/pdb'
+import { ccdCode, findAminoAcid } from '../../data/aminoacids'
 import {
   CLOUD_SCALE,
   atomCharges,
@@ -11,15 +12,40 @@ import {
   type CloudResponse,
   type GridSpec,
 } from './chargeCloud'
-import { apolarMask, atomColors, backboneMask, type SceneAtom } from './coloring'
+import {
+  apolarMask,
+  atomColors,
+  backboneMask,
+  chargeColor,
+  elementColor,
+  kyteDoolittleColor,
+  polarityClass,
+  sideChainColor,
+  type SceneAtom,
+} from './coloring'
 import { Legend } from './Legend'
 import { load3Dmol, type Lib3Dmol } from './load3Dmol'
 import { MEASURE_KINDS, measure, type MeasureKind, type Measurement } from './measure'
 import { faceOnQuaternion } from './orientation'
-import { HYDROPHILIC_COLOR, HYDROPHOBIC_COLOR, MEASURE_COLOR, VIEWER_BACKGROUND } from './palette'
+import {
+  HYDROPHILIC_COLOR,
+  HYDROPHOBIC_COLOR,
+  MEASURE_COLOR,
+  NEUTRAL_COLOR,
+  POLARITY_COLORS,
+  VIEWER_BACKGROUND,
+  divergingColor,
+} from './palette'
 import { fetchAtomNames, fetchStructure } from './structures'
 import { Toolbar } from './Toolbar'
-import { DEFAULT_STATE, resolveState, type MolViewerProps, type MolViewerState, type Representation } from './types'
+import {
+  DEFAULT_STATE,
+  resolveState,
+  type ColorMode,
+  type MolViewerProps,
+  type MolViewerState,
+  type Representation,
+} from './types'
 import './MolViewer.css'
 
 type ColorFunc = (atom: AtomSpec) => string
@@ -31,13 +57,17 @@ interface Cloud {
 }
 
 interface Scene {
-  /** URL de la molécula cargada; evita pintar una molécula con los datos de otra. */
-  url: string
+  /** Clave única de la molécula cargada; evita pintar una molécula con los datos de otra. */
+  key: string
   atoms: SceneAtom[]
 }
 
+const CHAIN_PALETTE = ['#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
+
 function representationStyle(representation: Representation, colorfunc: ColorFunc) {
   switch (representation) {
+    case 'cartoon':
+      return { cartoon: { colorfunc } }
     case 'sticks':
       return { stick: { radius: 0.2, colorfunc } }
     case 'spheres':
@@ -49,12 +79,50 @@ function representationStyle(representation: Representation, colorfunc: ColorFun
   }
 }
 
+function proteinColorFunc(mode: ColorMode, totalResidues: number, chains: string[], pH: number): ColorFunc {
+  return (atom: AtomSpec) => {
+    const elem = atom.elem ?? 'C'
+    if (mode === 'element') return elementColor(elem)
+    if (mode === 'ss') {
+      if (atom.ss === 'h') return '#ec4899'
+      if (atom.ss === 's') return '#f59e0b'
+      return '#a78bfa'
+    }
+    if (mode === 'chain') {
+      const idx = Math.max(0, chains.indexOf(atom.chain ?? 'A'))
+      return CHAIN_PALETTE[idx % CHAIN_PALETTE.length]
+    }
+    if (mode === 'rainbow') {
+      const resi = atom.resi ?? 1
+      const frac = Math.max(0, Math.min(1, (resi - 1) / Math.max(1, totalResidues - 1)))
+      return divergingColor(frac * 2 - 1, '#3b82f6', '#10b981', '#ef4444')
+    }
+    if (mode === 'bfactor') {
+      const b = atom.b ?? 20
+      const norm = Math.max(-1, Math.min(1, (b - 25) / 25))
+      return divergingColor(norm, '#3b82f6', '#f8fafc', '#ef4444')
+    }
+
+    const aa = atom.resn ? findAminoAcid(atom.resn) : undefined
+    if (!aa) return elementColor(elem)
+
+    if (mode === 'group') return sideChainColor('group', aa)
+    if (mode === 'hydrophobic') return aa.hydropathy > 0 ? HYDROPHOBIC_COLOR : HYDROPHILIC_COLOR
+    if (mode === 'kyte-doolittle') return kyteDoolittleColor(aa.hydropathy)
+    if (mode === 'polarity') return POLARITY_COLORS[polarityClass(aa.group)]
+    if (mode === 'charge') return chargeColor(netCharge(aa, pH))
+    return NEUTRAL_COLOR
+  }
+}
+
 /** Encuadra la molécula completa, vista de frente. */
 function frame(viewer: GLViewer, atoms: { x: number; y: number; z: number }[]) {
   viewer.zoomTo()
-  const view = viewer.getView()
-  viewer.setView([...view.slice(0, 4), ...faceOnQuaternion(atoms)])
-  viewer.zoomTo()
+  if (atoms.length > 0 && atoms.length <= 60) {
+    const view = viewer.getView()
+    viewer.setView([...view.slice(0, 4), ...faceOnQuaternion(atoms)])
+    viewer.zoomTo()
+  }
 }
 
 /** Libera el contexto WebGL: los navegadores solo permiten unos pocos a la vez. */
@@ -71,19 +139,30 @@ function releaseViewer(viewer: GLViewer, container: HTMLElement | null) {
 }
 
 export function MolViewer(props: MolViewerProps) {
-  const { molecule, pH = PHYSIOLOGICAL_PH, hideSideChain = false, spoilerFree = false, toolbar = true, onStateChange } = props
+  const {
+    molecule,
+    pH = PHYSIOLOGICAL_PH,
+    hideSideChain = false,
+    proteinOptions,
+    spoilerFree = false,
+    toolbar = true,
+    onStateChange,
+  } = props
   const { representation, colorMode, surface, surfaceOpacity, showHydrogens, labels } = props
-  const aminoAcid = molecule.aminoAcid
+  const isProtein = molecule.kind === 'pdb'
+  const aminoAcid = molecule.kind === 'sdf' ? molecule.aminoAcid : undefined
   const hasAminoAcid = Boolean(aminoAcid)
 
-  const [internal, setInternal] = useState<MolViewerState>(DEFAULT_STATE)
+  const [internal, setInternal] = useState<MolViewerState>(() =>
+    isProtein ? { ...DEFAULT_STATE, representation: 'cartoon', colorMode: 'ss', labels: 'none' } : DEFAULT_STATE,
+  )
   const controlled = useMemo(
     () => ({ representation, colorMode, surface, surfaceOpacity, showHydrogens, labels }),
     [representation, colorMode, surface, surfaceOpacity, showHydrogens, labels],
   )
   const state = useMemo(
-    () => resolveState(internal, controlled, { spoilerFree, hasAminoAcid }),
-    [internal, controlled, spoilerFree, hasAminoAcid],
+    () => resolveState(internal, controlled, { spoilerFree, hasAminoAcid, isProtein }),
+    [internal, controlled, spoilerFree, hasAminoAcid, isProtein],
   )
 
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -94,35 +173,42 @@ export function MolViewer(props: MolViewerProps) {
   const [scene, setScene] = useState<Scene | null>(null)
   const [viewerFailed, setViewerFailed] = useState(false)
   const [structureFailed, setStructureFailed] = useState(false)
-  // Al cambiar de molécula se descarta el error anterior durante el render, sin otro efecto.
-  const url = molecule.url
-  const [trackedUrl, setTrackedUrl] = useState(url)
-  if (trackedUrl !== url) {
-    setTrackedUrl(url)
+
+  const moleculeKey = molecule.kind === 'sdf' ? molecule.url : `pdb:${molecule.id}:${molecule.data.length}`
+  const [trackedKey, setTrackedKey] = useState(moleculeKey)
+  if (trackedKey !== moleculeKey) {
+    setTrackedKey(moleculeKey)
     setStructureFailed(false)
   }
   const status: 'loading' | 'ready' | 'error' =
-    viewerFailed || structureFailed ? 'error' : viewer !== null && scene?.url === url ? 'ready' : 'loading'
+    viewerFailed || structureFailed ? 'error' : viewer !== null && scene?.key === moleculeKey ? 'ready' : 'loading'
   const ready = status === 'ready'
 
   // Medidas: son del visor, no forman parte del estado compartido.
   const [measureKind, setMeasureKind] = useState<MeasureKind | null>(null)
   const [picks, setPicks] = useState<number[]>([])
   const [measurements, setMeasurements] = useState<Measurement[]>([])
-  const pickRef = useRef<(index: number) => void>(() => {})
-  // El visor llama siempre a la versión más reciente del manejador de clics.
+  const pickRef = useRef<(atom: AtomSpec) => void>(() => {})
+
   useEffect(() => {
-    pickRef.current = (index) => {
-      if (!measureKind || !scene || picks.includes(index)) return
-      const next = [...picks, index]
-      if (next.length < MEASURE_KINDS[measureKind].atoms) {
-        setPicks(next)
+    pickRef.current = (atom) => {
+      const index = atom.index ?? -1
+      if (measureKind && scene && index >= 0 && !picks.includes(index)) {
+        const next = [...picks, index]
+        if (next.length < MEASURE_KINDS[measureKind].atoms) {
+          setPicks(next)
+          return
+        }
+        setMeasurements((list) => [...list, measure(measureKind, next, next.map((i) => scene.atoms[i]))])
+        setPicks([])
         return
       }
-      setMeasurements((list) => [...list, measure(measureKind, next, next.map((i) => scene.atoms[i]))])
-      setPicks([])
+      if (isProtein && proteinOptions?.onResidueClick && atom.chain && atom.resi !== undefined) {
+        proteinOptions.onResidueClick(residueKey(atom.chain, atom.resi))
+      }
     }
-  }, [measureKind, scene, picks])
+  }, [measureKind, scene, picks, isProtein, proteinOptions])
+
   const changeMeasureKind = (kind: MeasureKind | null) => {
     setMeasureKind(kind)
     setPicks([])
@@ -134,12 +220,14 @@ export function MolViewer(props: MolViewerProps) {
 
   const update = useCallback(
     (patch: Partial<MolViewerState>) => {
-      // Se parte del estado sin el filtro anti-spoiler para no perder lo elegido antes.
-      const next = { ...resolveState(internal, controlled, { spoilerFree: false, hasAminoAcid: true }), ...patch }
+      const next = {
+        ...resolveState(internal, controlled, { spoilerFree: false, hasAminoAcid: true, isProtein }),
+        ...patch,
+      }
       setInternal(next)
       onStateChange?.(next)
     },
-    [internal, controlled, onStateChange],
+    [internal, controlled, onStateChange, isProtein],
   )
 
   // Crea el visor al montar y lo libera al desmontar.
@@ -201,12 +289,45 @@ export function MolViewer(props: MolViewerProps) {
     return () => observer.disconnect()
   }, [viewer])
 
-  // Carga la molécula y asigna a cada átomo su nombre del CCD.
+  // Carga la molécula (SDF o PDB).
   const ccd = aminoAcid ? ccdCode(aminoAcid) : null
   useEffect(() => {
     if (!viewer) return
     let cancelled = false
-    Promise.all([fetchStructure(url), ccd ? fetchAtomNames() : null])
+
+    if (molecule.kind === 'pdb') {
+      const pdbData = molecule.data
+      Promise.resolve()
+        .then(() => {
+          if (cancelled) return
+          viewer.removeAllModels()
+          viewer.removeAllSurfaces()
+          viewer.removeAllLabels()
+          viewer.removeAllShapes()
+          const atoms = viewer.addModel(pdbData, 'pdb').selectedAtoms({})
+          const sceneAtoms = atoms.map((atom) => ({
+            name: atom.atom ?? '',
+            element: atom.elem ?? '',
+            bonds: atom.bonds ?? [],
+            x: atom.x ?? 0,
+            y: atom.y ?? 0,
+            z: atom.z ?? 0,
+          }))
+          setScene({ key: moleculeKey, atoms: sceneAtoms })
+          setPicks([])
+          setMeasurements([])
+          viewer.setClickable({}, true, (atom: AtomSpec) => pickRef.current(atom))
+          frame(viewer, sceneAtoms)
+        })
+        .catch(() => {
+          if (!cancelled) setStructureFailed(true)
+        })
+      return () => {
+        cancelled = true
+      }
+    }
+
+    Promise.all([fetchStructure(molecule.url), ccd ? fetchAtomNames() : null])
       .then(([sdf, names]) => {
         if (cancelled) return
         viewer.removeAllModels()
@@ -226,10 +347,10 @@ export function MolViewer(props: MolViewerProps) {
           y: atom.y ?? 0,
           z: atom.z ?? 0,
         }))
-        setScene({ url, atoms: sceneAtoms })
+        setScene({ key: moleculeKey, atoms: sceneAtoms })
         setPicks([])
         setMeasurements([])
-        viewer.setClickable({}, true, (atom: AtomSpec) => pickRef.current(atom.index ?? -1))
+        viewer.setClickable({}, true, (atom: AtomSpec) => pickRef.current(atom))
         frame(viewer, sceneAtoms)
       })
       .catch(() => {
@@ -238,11 +359,94 @@ export function MolViewer(props: MolViewerProps) {
     return () => {
       cancelled = true
     }
-  }, [viewer, url, ccd])
+  }, [viewer, molecule, moleculeKey, ccd])
 
-  // Representación, colores e hidrógenos.
+  // Representación, colores, hidrógenos y resaltado de residuo en proteína.
   useEffect(() => {
     if (!ready || !viewer || !scene) return
+
+    if (molecule.kind === 'pdb') {
+      const parsed = molecule.parsed
+      const totalRes = parsed?.residues.length ?? 100
+      const chains = parsed?.chains ?? ['A']
+      const selKey = proteinOptions?.selectedResidueKey ?? null
+      const quizOnly = Boolean(proteinOptions?.quizSideChainOnly && selKey)
+
+      if (quizOnly && selKey) {
+        const [selChain, selResiText] = selKey.split(':')
+        const selResi = Number(selResiText)
+        // Atenuar el resto del entorno en gris translúcido
+        viewer.setStyle({}, { line: { color: '#475569', linewidth: 1 } })
+        // Mostrar en bolas y varillas por elemento la cadena lateral del residuo pregunta (o Cα en Gly)
+        viewer.setStyle(
+          { chain: selChain, resi: selResi },
+          {
+            stick: {
+              radius: 0.22,
+              colorfunc: (atom: AtomSpec) =>
+                isSideChainOrGlyCa(atom.atom ?? '', atom.resn ?? '')
+                  ? elementColor(atom.elem ?? 'C')
+                  : '#64748b',
+            },
+            sphere: {
+              scale: 0.3,
+              colorfunc: (atom: AtomSpec) =>
+                isSideChainOrGlyCa(atom.atom ?? '', atom.resn ?? '')
+                  ? elementColor(atom.elem ?? 'C')
+                  : '#64748b',
+            },
+          },
+        )
+        viewer.zoomTo({ chain: selChain, resi: selResi })
+      } else {
+        const colorfunc = proteinColorFunc(state.colorMode, totalRes, chains, pH)
+        viewer.setStyle({}, representationStyle(state.representation, colorfunc))
+
+        // Superposición de expuestos/enterrados o sitio de unión a ligando
+        if (parsed && proteinOptions?.showBurial) {
+          for (const res of parsed.residues) {
+            viewer.setStyle(
+              { chain: res.chain, resi: res.resSeq },
+              representationStyle(state.representation, () =>
+                res.burial === 'buried' ? '#f59e0b' : '#06b6d4',
+              ),
+            )
+          }
+        }
+        if (parsed && proteinOptions?.showLigandSite) {
+          for (const res of parsed.residues) {
+            if (res.nearLigand) {
+              viewer.setStyle(
+                { chain: res.chain, resi: res.resSeq },
+                {
+                  cartoon: { color: '#10b981' },
+                  stick: { radius: 0.2, color: '#10b981' },
+                },
+              )
+            }
+          }
+        }
+
+        if (selKey) {
+          const [selChain, selResiText] = selKey.split(':')
+          const selResi = Number(selResiText)
+          viewer.setStyle(
+            { chain: selChain, resi: selResi },
+            {
+              cartoon: { color: '#f43f5e' },
+              stick: { radius: 0.22, colorfunc: (atom: AtomSpec) => elementColor(atom.elem ?? 'C') },
+              sphere: { scale: 0.28, colorfunc: (atom: AtomSpec) => elementColor(atom.elem ?? 'C') },
+            },
+          )
+          viewer.zoomTo({ chain: selChain, resi: selResi })
+        }
+      }
+
+      if (!state.showHydrogens) viewer.setStyle({ elem: 'H' }, {})
+      viewer.render()
+      return
+    }
+
     const colors = atomColors(state.colorMode, scene.atoms, aminoAcid, pH)
     const colorfunc: ColorFunc = (atom) => colors[atom.index ?? 0]
     viewer.setStyle({}, representationStyle(state.representation, colorfunc))
@@ -254,9 +458,21 @@ export function MolViewer(props: MolViewerProps) {
     }
     if (!state.showHydrogens) viewer.setStyle({ elem: 'H' }, {})
     viewer.render()
-  }, [ready, viewer, scene, aminoAcid, pH, hideSideChain, state.representation, state.colorMode, state.showHydrogens])
+  }, [
+    ready,
+    viewer,
+    scene,
+    molecule,
+    aminoAcid,
+    pH,
+    hideSideChain,
+    proteinOptions,
+    state.representation,
+    state.colorMode,
+    state.showHydrogens,
+  ])
 
-  // Etiquetas de átomo y medidas (se redibujan juntas: comparten capa de etiquetas y formas).
+  // Etiquetas de átomo, interacciones de proteína (disulfuros, puentes salinos) y medidas.
   useEffect(() => {
     if (!ready || !viewer || !scene) return
     viewer.removeAllLabels()
@@ -272,19 +488,78 @@ export function MolViewer(props: MolViewerProps) {
         alignment: 'center',
       })
 
-    if (state.labels === 'atoms') {
+    if (molecule.kind === 'pdb' && molecule.parsed) {
+      const parsed = molecule.parsed
+      const quizOnly = Boolean(proteinOptions?.quizSideChainOnly && proteinOptions?.selectedResidueKey)
+
+      if (!quizOnly && proteinOptions?.showDisulfides) {
+        for (const bond of parsed.disulfides) {
+          viewer.addCylinder({
+            start: { x: bond.fromAtom.x, y: bond.fromAtom.y, z: bond.fromAtom.z },
+            end: { x: bond.toAtom.x, y: bond.toAtom.y, z: bond.toAtom.z },
+            radius: 0.18,
+            color: '#eab308',
+            fromCap: 1,
+            toCap: 1,
+          })
+          label(
+            `S–S ${bond.fromKey}↔${bond.toKey} (${bond.distance} Å)`,
+            {
+              x: (bond.fromAtom.x + bond.toAtom.x) / 2,
+              y: (bond.fromAtom.y + bond.toAtom.y) / 2,
+              z: (bond.fromAtom.z + bond.toAtom.z) / 2,
+            },
+            '#ca8a04',
+          )
+        }
+      }
+
+      if (!quizOnly && proteinOptions?.showSaltBridges) {
+        for (const bridge of parsed.saltBridges) {
+          viewer.addCylinder({
+            start: { x: bridge.positiveAtom.x, y: bridge.positiveAtom.y, z: bridge.positiveAtom.z },
+            end: { x: bridge.negativeAtom.x, y: bridge.negativeAtom.y, z: bridge.negativeAtom.z },
+            radius: 0.08,
+            dashed: true,
+            dashLength: 0.25,
+            gapLength: 0.15,
+            color: '#ec4899',
+            fromCap: 1,
+            toCap: 1,
+          })
+          label(
+            `Salino ${bridge.positiveKey}↔${bridge.negativeKey} (${bridge.distance} Å)`,
+            {
+              x: (bridge.positiveAtom.x + bridge.negativeAtom.x) / 2,
+              y: (bridge.positiveAtom.y + bridge.negativeAtom.y) / 2,
+              z: (bridge.positiveAtom.z + bridge.negativeAtom.z) / 2,
+            },
+            '#be185d',
+          )
+        }
+      }
+
+      if (!quizOnly && !spoilerFree && proteinOptions?.selectedResidueKey) {
+        const res = parsed.residues.find((r) => r.key === proteinOptions.selectedResidueKey)
+        const ca = res?.atoms.find((a) => a.name === 'CA') ?? res?.atoms[0]
+        if (res && ca) {
+          label(`${res.aminoAcid.code3} ${res.resSeq} (${res.chain})`, ca, '#7c3aed')
+        }
+      }
+    } else if (state.labels === 'atoms') {
       const backbone = hideSideChain ? backboneMask(scene.atoms) : null
       scene.atoms.forEach((atom, idx) => {
         if (backbone && !backbone[idx]) return
         if (atom.element !== 'H' && atom.name) label(atom.name, atom, '#000000')
       })
     }
+
     for (const index of picks) {
-      const { x, y, z } = scene.atoms[index]
-      viewer.addSphere({ center: { x, y, z }, radius: 0.5, color: MEASURE_COLOR, opacity: 0.65 })
+      const atom = scene.atoms[index]
+      if (atom) viewer.addSphere({ center: { x: atom.x, y: atom.y, z: atom.z }, radius: 0.5, color: MEASURE_COLOR, opacity: 0.65 })
     }
     for (const measurement of measurements) {
-      const points = measurement.atoms.map((index) => scene.atoms[index])
+      const points = measurement.atoms.map((index) => scene.atoms[index]).filter(Boolean)
       for (let i = 1; i < points.length; i++) {
         const [start, end] = [points[i - 1], points[i]]
         viewer.addCylinder({
@@ -302,13 +577,14 @@ export function MolViewer(props: MolViewerProps) {
       label(measurement.text, measurement.anchor, MEASURE_COLOR)
     }
     viewer.render()
-  }, [ready, viewer, scene, hideSideChain, state.labels, picks, measurements])
+  }, [ready, viewer, scene, molecule, hideSideChain, spoilerFree, proteinOptions, state.labels, picks, measurements])
 
-  // Superficies: nube de carga (pH 7) o hidrofobicidad por átomo.
+  // Superficies: nube de carga (pH 7) o hidrofobicidad.
   useEffect(() => {
     const lib = libRef.current
-    if (!ready || !viewer || !scene || !lib || !aminoAcid) return
+    if (!ready || !viewer || !scene || !lib) return
     if (state.surface === 'none') return
+    if (!isProtein && !aminoAcid) return
     let cancelled = false
     let surface: Promise<unknown> | null = null
     const add = (style: Record<string, unknown>) => {
@@ -321,13 +597,13 @@ export function MolViewer(props: MolViewerProps) {
     if (state.surface === 'hydrophobicity') {
       const apolar = apolarMask(scene.atoms)
       add({ colorfunc: (atom: AtomSpec) => (apolar[atom.index ?? 0] ? HYDROPHOBIC_COLOR : HYDROPHILIC_COLOR) })
-    } else {
+    } else if (aminoAcid) {
       const charges = atomCharges(
         aminoAcid,
         scene.atoms.map((atom) => atom.name),
         pH,
       )
-      requestCloud(scene, charges, `${scene.url}@${pH.toFixed(2)}`)
+      requestCloud(scene, charges, `${scene.key}@${pH.toFixed(2)}`)
         .then((cloud) => {
           const voldata = new lib.VolumeData('', 'none')
           const [x, y, z] = cloud.spec.origin
@@ -339,11 +615,17 @@ export function MolViewer(props: MolViewerProps) {
           add({ voldata, volscheme: new lib.Gradient.RWB(-CLOUD_SCALE, CLOUD_SCALE) })
         })
         .catch((error) => console.error('No se pudo calcular la nube de carga', error))
+    } else if (isProtein) {
+      add({
+        colorfunc: (atom: AtomSpec) => {
+          const aa = atom.resn ? findAminoAcid(atom.resn) : undefined
+          return aa ? chargeColor(netCharge(aa, pH)) : '#ffffff'
+        },
+      })
     }
 
     return () => {
       cancelled = true
-      // La superficie se crea de forma asíncrona: se retira cuando termine.
       if (surface) {
         surface.then((id) => {
           viewer.removeSurface(id as number)
@@ -351,7 +633,7 @@ export function MolViewer(props: MolViewerProps) {
         })
       }
     }
-  }, [ready, viewer, scene, aminoAcid, pH, state.surface, state.surfaceOpacity, requestCloud])
+  }, [ready, viewer, scene, isProtein, aminoAcid, pH, state.surface, state.surfaceOpacity, requestCloud])
 
   const reset = () => {
     if (!viewer || !scene) return
@@ -363,12 +645,21 @@ export function MolViewer(props: MolViewerProps) {
     if (!viewer) return
     const link = document.createElement('a')
     link.href = viewer.pngURI()
-    // En modo quiz el nombre del archivo tampoco debe delatar la respuesta.
-    link.download = aminoAcid && !spoilerFree ? `aminolab-${aminoAcid.code3.toLowerCase()}.png` : 'aminolab.png'
+    link.download =
+      aminoAcid && !spoilerFree
+        ? `aminolab-${aminoAcid.code3.toLowerCase()}.png`
+        : isProtein
+          ? `aminolab-${molecule.id.toLowerCase()}.png`
+          : 'aminolab.png'
     link.click()
   }
 
-  const title = aminoAcid && !spoilerFree ? `Visor 3D de ${aminoAcid.name}` : 'Visor 3D de la molécula'
+  const title =
+    aminoAcid && !spoilerFree
+      ? `Visor 3D de ${aminoAcid.name}`
+      : isProtein && !spoilerFree
+        ? `Visor 3D de la proteína ${molecule.id}`
+        : 'Visor 3D de la molécula'
 
   return (
     <div className="mol-viewer">
@@ -378,6 +669,7 @@ export function MolViewer(props: MolViewerProps) {
           onChange={update}
           spoilerFree={spoilerFree}
           hasAminoAcid={hasAminoAcid}
+          isProtein={isProtein}
           disabled={!ready}
           onReset={reset}
           onCapture={capture}

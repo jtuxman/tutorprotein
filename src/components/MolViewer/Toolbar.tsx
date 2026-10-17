@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { COLOR_MODES, REPRESENTATIONS, SURFACES, TOOLS, type Explanation } from './explanations'
 import { MEASURE_KINDS, type MeasureKind } from './measure'
 import {
+  isProteinOnlyColorMode,
   isRevealingColorMode,
   type ColorMode,
   type MolViewerState,
@@ -15,6 +16,7 @@ interface ToolbarProps {
   spoilerFree: boolean
   /** Sin aminoácido asociado no hay propiedades que colorear. */
   hasAminoAcid: boolean
+  isProtein?: boolean
   disabled: boolean
   onReset: () => void
   onCapture: () => void
@@ -50,6 +52,7 @@ export function Toolbar({
   onChange,
   spoilerFree,
   hasAminoAcid,
+  isProtein = false,
   disabled,
   onReset,
   onCapture,
@@ -73,7 +76,13 @@ export function Toolbar({
   const toggleInfo = (id: keyof typeof explanations) => setInfoKey((shown) => (shown === id ? null : id))
   const info = infoKey && explanations[infoKey]
   const infoProps = { explanations, current: infoKey, onToggle: toggleInfo }
-  const propertiesLocked = spoilerFree || !hasAminoAcid
+  const propertiesLocked = spoilerFree || (!hasAminoAcid && !isProtein)
+  const visibleRepresentations = (Object.keys(REPRESENTATIONS) as Representation[]).filter(
+    (key) => isProtein || key !== 'cartoon',
+  )
+  const visibleColorModes = (Object.keys(COLOR_MODES) as ColorMode[]).filter(
+    (key) => isProtein || !isProteinOnlyColorMode(key),
+  )
 
   return (
     <div className="mol-toolbar">
@@ -95,7 +104,7 @@ export function Toolbar({
               disabled={disabled}
               onChange={(event) => onChange({ representation: event.target.value as Representation })}
             >
-              {(Object.keys(REPRESENTATIONS) as Representation[]).map((key) => (
+              {visibleRepresentations.map((key) => (
                 <option key={key} value={key}>
                   {REPRESENTATIONS[key].label}
                 </option>
@@ -113,7 +122,7 @@ export function Toolbar({
               disabled={disabled}
               onChange={(event) => onChange({ colorMode: event.target.value as ColorMode })}
             >
-              {(Object.keys(COLOR_MODES) as ColorMode[]).map((key) => (
+              {visibleColorModes.map((key) => (
                 <option key={key} value={key} disabled={propertiesLocked && isRevealingColorMode(key)}>
                   {COLOR_MODES[key].label}
                 </option>

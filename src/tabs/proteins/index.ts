@@ -1,0 +1,1 @@
+export { ProteinsTab } from './ProteinsTab'

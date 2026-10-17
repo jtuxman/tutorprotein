@@ -3,6 +3,7 @@ import './App.css'
 import { currentStreak, dueCards, useProgress } from './progress'
 import { ClassificationTab } from './tabs/classification'
 import { ComingSoon } from './tabs/ComingSoon'
+import { ProteinsTab } from './tabs/proteins'
 import { QuizTab } from './tabs/quiz'
 import { TABS, type TabId } from './tabs/tabs'
 
@@ -88,6 +89,8 @@ function App() {
           <ClassificationTab />
         ) : activeTab.id === 'self-assessment' ? (
           <QuizTab startDailyReview={startDaily} />
+        ) : activeTab.id === 'proteins' ? (
+          <ProteinsTab />
         ) : (
           <ComingSoon tab={activeTab} />
         )}

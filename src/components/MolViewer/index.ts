@@ -7,6 +7,9 @@ export type {
   MolViewerProps,
   MolViewerState,
   Molecule,
+  PdbMolecule,
+  ProteinOverlayOptions,
   Representation,
+  SdfMolecule,
   SurfaceMode,
 } from './types'
