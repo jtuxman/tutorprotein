@@ -35,6 +35,8 @@ export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: 
   const [trioCandidates, setTrioCandidates] = useState<AminoAcid[]>(() =>
     buildTrioCandidates(initialAminoAcid ?? AMINO_ACIDS.find((aa) => aa.code3 === 'Asp') ?? AMINO_ACIDS[0]),
   )
+  // Códigos de candidatos equivocados ya descartados en la ronda actual
+  const [eliminatedCodes, setEliminatedCodes] = useState<string[]>([])
   const [gameScore, setGameScore] = useState<{ hits: number; rounds: number; streak: number }>({
     hits: 0,
     rounds: 0,
@@ -53,6 +55,7 @@ export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: 
   const selectTarget = (next: AminoAcid) => {
     setTarget(next)
     setAttached(null)
+    setEliminatedCodes([])
     setTrioCandidates(buildTrioCandidates(next))
   }
 
@@ -64,12 +67,19 @@ export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: 
 
   const handleAttachSideChain = (candidate: AminoAcid) => {
     const correct = candidate.code3 === target.code3
-    if (sectionMode === 'trio-game' && attached === null) {
-      setGameScore((prev) => ({
-        hits: prev.hits + (correct ? 1 : 0),
-        rounds: prev.rounds + 1,
-        streak: correct ? prev.streak + 1 : 0,
-      }))
+    if (sectionMode === 'trio-game') {
+      if (isExactMatch) return
+      if (correct) {
+        const firstTry = eliminatedCodes.length === 0
+        setGameScore((prev) => ({
+          hits: prev.hits + (firstTry ? 1 : 0),
+          rounds: prev.rounds + 1,
+          streak: firstTry ? prev.streak + 1 : prev.streak,
+        }))
+      } else {
+        setEliminatedCodes((prev) => (prev.includes(candidate.code3) ? prev : [...prev, candidate.code3]))
+        setGameScore((prev) => ({ ...prev, streak: 0 }))
+      }
     }
     setAttached(candidate)
     recordAttempt({
@@ -83,6 +93,7 @@ export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: 
   const switchSectionMode = (nextMode: SectionMode) => {
     setSectionMode(nextMode)
     setAttached(null)
+    setEliminatedCodes([])
     if (nextMode === 'trio-game') {
       setTrioCandidates(buildTrioCandidates(target))
     }
@@ -193,10 +204,16 @@ export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: 
         <div className="target-spec-header">
           <div>
             <span className="filter-bar__label">
-              {sectionMode === 'trio-game' ? 'Reto 3D: ¿Cuál de los 3 modelos tiene estas características?' : 'Residuo solicitado'}
+              {sectionMode === 'trio-game'
+                ? 'Encuentra cuál de los 3 modelos 3D corresponde a este aminoácido'
+                : 'Residuo solicitado'}
             </span>
             <h3>
-              {(sectionMode === 'trio-game' || blindMode) && !isExactMatch ? (
+              {sectionMode === 'trio-game' ? (
+                <>
+                  Reto 3D: {target.name} ({target.code3} · {target.code1}) <GroupBadge aminoAcid={target} />
+                </>
+              ) : blindMode && !isExactMatch ? (
                 <>
                   🕵️ Residuo buscado — Pista: <em>{target.note}</em>
                 </>
@@ -210,11 +227,11 @@ export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: 
           <span className="ph-badge">
             {attached === null
               ? sectionMode === 'trio-game'
-                ? 'Rota los 3 modelos 3D abajo y elige el correcto'
+                ? 'Rota los modelos 3D abajo y elige el que corresponda'
                 : 'Esperando cadena lateral (R)…'
               : isExactMatch
                 ? '✅ ¡Elección 3D correcta!'
-                : `❌ ${wrongTraitsCount} ${wrongTraitsCount === 1 ? 'característica no coincide' : 'características no coinciden'}`}
+                : `❌ ${wrongTraitsCount} ${wrongTraitsCount === 1 ? 'característica no coincide' : 'características no coinciden'} — elige entre los que quedan`}
           </span>
         </div>
 
@@ -268,10 +285,12 @@ export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: 
             <div className="quiz-feedback__headline">
               <strong>
                 {isExactMatch
-                  ? `🎉 ¡Exacto! El modelo corresponde a ${target.name} (${target.code3} · ${target.code1}).`
-                  : `❌ Elegiste ${attached.name} (${attached.code3}: ${sideChainFormula(attached)}). El residuo buscado es ${target.name} (${target.code3}).`}
+                  ? `🎉 ¡Exacto! Encontraste el modelo 3D de ${target.name} (${target.code3} · ${target.code1}).`
+                  : sectionMode === 'trio-game'
+                    ? `❌ Ese modelo era ${attached.name} (${attached.code3}: ${sideChainFormula(attached)}). Se ha quitado de las opciones; ¡elige entre los modelos 3D que quedan!`
+                    : `❌ Elegiste ${attached.name} (${attached.code3}: ${sideChainFormula(attached)}). El residuo buscado es ${target.name} (${target.code3}).`}
               </strong>
-              {sectionMode === 'trio-game' && (
+              {sectionMode === 'trio-game' && isExactMatch && (
                 <button type="button" className="pill-button pill-button--primary" onClick={pickRandomTarget}>
                   Siguiente reto de 3 en 3D →
                 </button>
@@ -285,7 +304,7 @@ export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: 
               ) : (
                 <>
                   La cadena lateral de {attached.name} aporta: <em>{geometryTraitFor(attached)}</em>. Revisa los
-                  renglones con tache (❌) arriba.
+                  renglones con tache (❌) arriba y selecciona otro candidato abajo.
                 </>
               )}
             </span>
@@ -297,27 +316,23 @@ export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: 
         <section className="panel" aria-label="Tres candidatos probables visualizados en 3D">
           <div className="sidechain-3d-header">
             <div>
-              <h3>Elige entre los 3 candidatos probables (visualizados en 3D)</h3>
+              <h3>
+                Candidatos en 3D para {target.name} ({target.code3})
+              </h3>
               <p className="panel__caption">
-                Rota e inspecciona cada molécula 3D. Los colores de grupo y etiquetas están ocultos (modo anti-spoiler)
-                hasta que elijas uno.
+                Rota e inspecciona cada molécula 3D. Si te equivocas, ese candidato se descarta para que puedas volver a
+                seleccionar entre los restantes.
               </p>
             </div>
           </div>
 
           <div className="trio-3d-grid" role="group" aria-label="Candidatos en 3D">
             {trioCandidates.map((candidate, index) => {
+              if (eliminatedCodes.includes(candidate.code3)) return null
               const letter = ['A', 'B', 'C'][index] ?? String(index + 1)
-              const revealed = attached !== null
-              const isChosen = attached?.code3 === candidate.code3
+              const won = isExactMatch
               const isWinner = candidate.code3 === target.code3
-              const cardStatus = !revealed
-                ? ''
-                : isWinner
-                  ? ' trio-3d-card--correct'
-                  : isChosen
-                    ? ' trio-3d-card--wrong'
-                    : ''
+              const cardStatus = won && isWinner ? ' trio-3d-card--correct' : ''
 
               return (
                 <article
@@ -327,9 +342,9 @@ export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: 
                 >
                   <header className="trio-3d-card__header">
                     <span className="trio-3d-card__badge">Candidato {letter}</span>
-                    {revealed && (
+                    {won && (
                       <span className="trio-3d-card__reveal">
-                        {isWinner ? '✅ ' : isChosen ? '❌ ' : ''}
+                        {isWinner ? '✅ ' : ''}
                         <strong>
                           {candidate.name} ({candidate.code3})
                         </strong>
@@ -339,12 +354,12 @@ export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: 
 
                   <MolViewer
                     molecule={aminoAcidMolecule(candidate)}
-                    spoilerFree={!revealed}
+                    spoilerFree={!won}
                     toolbar={false}
-                    colorMode={revealed ? 'group' : 'element'}
+                    colorMode={won ? 'group' : 'element'}
                   />
 
-                  {revealed && (
+                  {won && (
                     <p className="trio-3d-card__meta">
                       <code>{sideChainFormula(candidate)}</code> · {geometryTraitFor(candidate)}
                     </p>
@@ -352,14 +367,13 @@ export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: 
 
                   <button
                     type="button"
-                    className={`pill-button ${isChosen ? 'pill-button--primary' : ''} trio-3d-card__choose`}
+                    disabled={won}
+                    className={`pill-button ${won && isWinner ? 'pill-button--primary' : ''} trio-3d-card__choose`}
                     onClick={() => handleAttachSideChain(candidate)}
                   >
-                    {!revealed
-                      ? `Elegir candidato ${letter}`
-                      : isWinner
-                        ? `✅ Era ${candidate.name} (${candidate.code3})`
-                        : `Ver qué falla en ${candidate.code3}`}
+                    {won && isWinner
+                      ? `✅ ¡Correcto: ${candidate.name} (${candidate.code3})!`
+                      : `Elegir candidato ${letter}`}
                   </button>
                 </article>
               )

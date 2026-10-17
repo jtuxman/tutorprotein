@@ -106,7 +106,8 @@ describe('ClassificationTab', () => {
     expect(screen.getAllByText(/Tache:/).length).toBeGreaterThan(0)
 
     // También permite jugar a elegir entre 3 candidatos visualizados en 3D
-    fireEvent.click(screen.getByRole('button', { name: /Juego: Elige entre 3 en 3D/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Juego: 3 en 3D/ }))
+    expect(screen.getByRole('heading', { name: /Reto 3D: Ácido aspártico/ })).toBeInTheDocument()
     expect(screen.getAllByTestId('mol-viewer')).toHaveLength(3)
     fireEvent.click(screen.getByRole('button', { name: 'Elegir candidato A' }))
     expect(screen.getByRole('status')).toBeInTheDocument()
