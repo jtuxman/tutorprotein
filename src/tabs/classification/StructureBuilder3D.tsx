@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { MolViewer, aminoAcidMolecule } from '../../components/MolViewer'
+import { Structure2D } from '../../components/Structure2D'
 import { AMINO_ACIDS, GROUPS, GROUP_ORDER, type AminoAcid, type LehningerGroup } from '../../data/aminoacids'
 import { compareSideChainTraits, geometryTraitFor, sideChainFormula } from '../../data/sideChainTraits'
 import { TRIVIA } from '../../data/trivia'
@@ -215,30 +216,37 @@ export function StructureBuilder3D({ initialAminoAcid }: StructureBuilder3DProps
         )}
       </section>
 
-      <div className="aa-detail__structures">
-        <section className="panel" aria-label="Visor 3D de ensamblaje">
-          <h3>
-            {attached === null
-              ? 'Base 3D del aminoácido: H₂N–CαH–COOH (sin cadena lateral)'
-              : isExactMatch
-                ? `Estructura 3D ensamblada: ${target.name} (${target.code3})`
-                : `Vista previa 3D con la cadena lateral elegida (${sideChainFormula(attached)})`}
-          </h3>
+      <section className="panel builder-3d-stage" aria-label="Visor 3D de ensamblaje">
+        <h3>
+          {attached === null
+            ? 'Base 3D del aminoácido: H₂N–CαH–COOH (sin cadena lateral)'
+            : isExactMatch
+              ? `Estructura 3D ensamblada: ${target.name} (${target.code3})`
+              : `Vista previa 3D con la cadena lateral elegida (${sideChainFormula(attached)})`}
+        </h3>
+        <div className="builder-3d-stage__viewer">
           <MolViewer
             molecule={aminoAcidMolecule(viewerAminoAcid)}
             hideSideChain={attached === null}
             spoilerFree={blindMode && !isExactMatch}
             colorMode={attached ? 'group' : 'element'}
           />
-          <p className="panel__caption">
-            {attached === null
-              ? 'Solo están visibles los átomos del esqueleto común (N, CA, C, O, OXT). Elige una cadena lateral a la derecha para injertarla sobre el Cα.'
-              : 'En modo color por grupo, el esqueleto se mantiene gris y la cadena lateral acoplada resalta con el color de su familia química.'}
-          </p>
-        </section>
+        </div>
+        <p className="panel__caption">
+          {attached === null
+            ? 'Solo están visibles los átomos del esqueleto común (N, CA, C, O, OXT). Elige una tarjeta gráfica de cadena lateral abajo para injertarla sobre el Cα.'
+            : 'En modo color por grupo, el esqueleto se mantiene gris y la cadena lateral acoplada resalta con el color de su familia química.'}
+        </p>
+      </section>
 
-        <section className="panel" aria-label="Bandeja de cadenas laterales para acoplar en 3D">
-          <h3>Elige una cadena lateral (R) para acoplar al Cα</h3>
+      <section className="panel" aria-label="Bandeja de cadenas laterales para acoplar en 3D">
+        <div className="sidechain-3d-header">
+          <div>
+            <h3>Elige una cadena lateral (R) para acoplar al Cα</h3>
+            <p className="panel__caption">
+              Las 20 opciones están a la vista con su estructura gráfica 2D y lo que aportan, sin desplazamientos ocultos.
+            </p>
+          </div>
           <div className="filter-bar__chips" role="group" aria-label="Filtrar cadenas laterales por grupo">
             <button
               type="button"
@@ -260,39 +268,50 @@ export function StructureBuilder3D({ initialAminoAcid }: StructureBuilder3DProps
               </button>
             ))}
           </div>
+        </div>
 
-          <div className="sidechain-3d-palette" role="group" aria-label="Opciones de cadenas laterales">
-            {visibleCandidates.map((candidate) => {
-              const isSelected = attached?.code3 === candidate.code3
-              const statusMod = isSelected
-                ? candidate.code3 === target.code3
-                  ? ' sidechain-tile--correct'
-                  : ' sidechain-tile--wrong'
-                : ''
-              return (
-                <button
-                  key={candidate.code3}
-                  type="button"
-                  className={`sidechain-tile${statusMod}`}
-                  aria-pressed={isSelected}
-                  onClick={() => handleAttachSideChain(candidate)}
-                >
-                  <div className="sidechain-tile__top">
-                    <code className="sidechain-tile__formula">{sideChainFormula(candidate)}</code>
-                    {isSelected && (
-                      <span aria-hidden="true">{candidate.code3 === target.code3 ? '✅' : '❌'}</span>
-                    )}
-                  </div>
-                  <span className="sidechain-tile__geom">{geometryTraitFor(candidate)}</span>
-                  <span className="sidechain-tile__meta">
-                    {GROUPS[candidate.group].label} · Hidropatía {candidate.hydropathy > 0 ? `+${candidate.hydropathy}` : candidate.hydropathy}
+        <div className="sidechain-3d-palette" role="group" aria-label="Opciones de cadenas laterales">
+          {visibleCandidates.map((candidate) => {
+            const isSelected = attached?.code3 === candidate.code3
+            const statusMod = isSelected
+              ? candidate.code3 === target.code3
+                ? ' sidechain-tile--correct'
+                : ' sidechain-tile--wrong'
+              : ''
+            return (
+              <button
+                key={candidate.code3}
+                type="button"
+                className={`sidechain-tile${statusMod}`}
+                style={{ '--group-color': `var(${GROUPS[candidate.group].cssVar})` } as React.CSSProperties}
+                aria-pressed={isSelected}
+                onClick={() => handleAttachSideChain(candidate)}
+              >
+                <div className="sidechain-tile__top">
+                  <code className="sidechain-tile__formula">{sideChainFormula(candidate)}</code>
+                  <span className="sidechain-tile__status" aria-hidden="true">
+                    {isSelected ? (candidate.code3 === target.code3 ? '✅' : '❌') : '➕'}
                   </span>
-                </button>
-              )
-            })}
-          </div>
-        </section>
-      </div>
+                </div>
+                <div className="sidechain-tile__graphic">
+                  <Structure2D
+                    smiles={candidate.smiles}
+                    size={130}
+                    ariaLabel={` Diagrama de cadena lateral ${sideChainFormula(candidate)}`}
+                  />
+                </div>
+                <span className="sidechain-tile__geom">{geometryTraitFor(candidate)}</span>
+                <div className="sidechain-tile__badges">
+                  <span className="sidechain-tile__group-tag">{GROUPS[candidate.group].label}</span>
+                  <span className="sidechain-tile__hydro-tag">
+                    KD {candidate.hydropathy > 0 ? `+${candidate.hydropathy}` : candidate.hydropathy}
+                  </span>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </section>
     </div>
   )
 }
