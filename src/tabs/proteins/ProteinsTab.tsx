@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   BURIAL_LABELS,
   SECONDARY_STRUCTURE_LABELS,
+  computeProteinStats,
   explainBurialSense,
   findResidueContacts,
   parsePdb,
@@ -139,6 +140,8 @@ export function ProteinsTab() {
     () => findResidueContacts(protein, activeResidue?.key ?? null),
     [protein, activeResidue],
   )
+
+  const proteinStats = useMemo(() => computeProteinStats(protein), [protein])
 
   const handleAnswerQuiz = (optionId: string) => {
     if (!activeQuestion || answered) return
@@ -714,6 +717,128 @@ export function ProteinsTab() {
             ) : null}
           </section>
         )}
+
+        {/* Panel inferior con datos del archivo PDB y cálculos globales de la proteína */}
+        <section className="panel protein-stats-panel" aria-label="Datos del PDB y cálculos de la proteína">
+          <div className="protein-stats-header">
+            <div>
+              <h3>📊 Datos del PDB y cálculos globales de {protein.id}</h3>
+              <p className="panel__caption">{protein.title}</p>
+            </div>
+            {/^[A-Z0-9]{4}$/.test(protein.id) && (
+              <a
+                className="pill-button"
+                href={`https://www.rcsb.org/structure/${protein.id}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                🔗 Ver ficha {protein.id} en RCSB PDB ↗
+              </a>
+            )}
+          </div>
+
+          <dl className="residue-props protein-stats-grid">
+            <div>
+              <dt>Residuos hidrofóbicos (KD &gt; 0)</dt>
+              <dd>
+                {proteinStats.hydrophobicCount} de {proteinStats.totalResidues} ({proteinStats.hydrophobicPercent} %)
+              </dd>
+            </div>
+            <div>
+              <dt>Residuos hidrofílicos (KD ≤ 0)</dt>
+              <dd>
+                {proteinStats.hydrophilicCount} de {proteinStats.totalResidues} ({proteinStats.hydrophilicPercent} %)
+              </dd>
+            </div>
+            <div>
+              <dt>Hidropatía media (GRAVY)</dt>
+              <dd>
+                {proteinStats.averageHydropathy > 0
+                  ? `+${proteinStats.averageHydropathy}`
+                  : proteinStats.averageHydropathy}{' '}
+                ({proteinStats.averageHydropathy > 0 ? 'predominio apolar' : 'soluble / hidrofílica'})
+              </dd>
+            </div>
+            <div>
+              <dt>Promedio de contactos por residuo (≤ 4.5 Å)</dt>
+              <dd>{proteinStats.averageContacts} contactos / residuo</dd>
+            </div>
+            <div>
+              <dt>Residuo con más contactos</dt>
+              <dd>
+                {proteinStats.mostContacts ? (
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() => {
+                      setMode('explore')
+                      setSelectedResidueKey(proteinStats.mostContacts!.residue.key)
+                    }}
+                  >
+                    {proteinStats.mostContacts.residue.aminoAcid.name} ({proteinStats.mostContacts.residue.aminoAcid.code3}{' '}
+                    {proteinStats.mostContacts.residue.resSeq}, cadena {proteinStats.mostContacts.residue.chain}) —{' '}
+                    <strong>{proteinStats.mostContacts.count} contactos</strong>
+                  </button>
+                ) : (
+                  '—'
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Residuo con menos contactos</dt>
+              <dd>
+                {proteinStats.leastContacts ? (
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() => {
+                      setMode('explore')
+                      setSelectedResidueKey(proteinStats.leastContacts!.residue.key)
+                    }}
+                  >
+                    {proteinStats.leastContacts.residue.aminoAcid.name} ({proteinStats.leastContacts.residue.aminoAcid.code3}{' '}
+                    {proteinStats.leastContacts.residue.resSeq}, cadena {proteinStats.leastContacts.residue.chain}) —{' '}
+                    <strong>{proteinStats.leastContacts.count} contactos</strong>
+                  </button>
+                ) : (
+                  '—'
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Empaquetamiento (enterrados vs. expuestos)</dt>
+              <dd>
+                {proteinStats.buriedCount} enterrados · {proteinStats.exposedCount} expuestos
+              </dd>
+            </div>
+            <div>
+              <dt>Puentes detectados</dt>
+              <dd>
+                {protein.disulfides.length} disulfuros · {protein.saltBridges.length} salinos
+              </dd>
+            </div>
+            <div>
+              <dt>Clasificación / método en el PDB</dt>
+              <dd>
+                {protein.metadata.classification ?? 'Proteína'}
+                {protein.metadata.experimentalMethod ? ` · ${protein.metadata.experimentalMethod}` : ''}
+                {protein.metadata.resolution ? ` (${protein.metadata.resolution})` : ''}
+              </dd>
+            </div>
+            {protein.metadata.organism && (
+              <div>
+                <dt>Organismo de origen (SOURCE)</dt>
+                <dd>{protein.metadata.organism}</dd>
+              </div>
+            )}
+            {protein.metadata.depositionDate && (
+              <div>
+                <dt>Fecha en cabecera PDB</dt>
+                <dd>{protein.metadata.depositionDate}</dd>
+              </div>
+            )}
+          </dl>
+        </section>
       </div>
     </div>
   )

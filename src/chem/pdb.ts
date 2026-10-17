@@ -67,9 +67,18 @@ export interface SaltBridge {
   negativeAtom: PdbAtom
 }
 
+export interface PdbMetadata {
+  classification?: string
+  depositionDate?: string
+  experimentalMethod?: string
+  resolution?: string
+  organism?: string
+}
+
 export interface ParsedProtein {
   id: string
   title: string
+  metadata: PdbMetadata
   chains: string[]
   residues: ProteinResidue[]
   ligandNames: string[]
@@ -258,6 +267,11 @@ export function residueKey(chain: string, resSeq: number): string {
 export function parsePdb(rawPdb: string, fallbackId = 'PDB'): ParsedProtein {
   const lines = rawPdb.split(/\r?\n/)
   let headerId = ''
+  let classification = ''
+  let depositionDate = ''
+  let experimentalMethod = ''
+  let resolution = ''
+  let organism = ''
   const titleParts: string[] = []
   const ssRanges: SsRange[] = []
   const atoms: PdbAtom[] = []
@@ -270,11 +284,24 @@ export function parsePdb(rawPdb: string, fallbackId = 'PDB'): ParsedProtein {
   for (const line of lines) {
     const record = line.slice(0, 6).trim()
     if (record === 'HEADER') {
+      const cls = line.slice(10, 50).trim()
+      const date = line.slice(50, 59).trim()
       const code = line.slice(62, 66).trim()
+      if (cls) classification = cls
+      if (date) depositionDate = date
       if (code) headerId = code
     } else if (record === 'TITLE') {
       const part = line.slice(10, 80).trim()
       if (part) titleParts.push(part)
+    } else if (record === 'EXPDTA') {
+      const exp = line.slice(10, 79).trim()
+      if (exp) experimentalMethod = exp
+    } else if (record === 'SOURCE') {
+      const match = /ORGANISM_SCIENTIFIC:\s*([^;]+)/i.exec(line)
+      if (match && !organism) organism = match[1].trim()
+    } else if (record === 'REMARK') {
+      const match = /RESOLUTION\.\s+([\d.]+)\s+ANGSTROMS/i.exec(line)
+      if (match && !resolution) resolution = `${match[1]} Å`
     } else if (record === 'HELIX') {
       const chain = line.slice(19, 20).trim() || 'A'
       const start = Number(line.slice(21, 25).trim())
@@ -548,6 +575,13 @@ export function parsePdb(rawPdb: string, fallbackId = 'PDB'): ParsedProtein {
   return {
     id,
     title,
+    metadata: {
+      classification: classification || undefined,
+      depositionDate: depositionDate || undefined,
+      experimentalMethod: experimentalMethod || undefined,
+      resolution: resolution || undefined,
+      organism: organism || undefined,
+    },
     chains,
     residues,
     ligandNames: Array.from(ligandNamesSet),
@@ -683,4 +717,89 @@ export function findResidueContacts(
 
   return contacts.sort((a, b) => a.distance - b.distance)
 }
+
+export interface ResidueContactSummary {
+  residue: ProteinResidue
+  count: number
+}
+
+export interface ProteinStats {
+  totalResidues: number
+  hydrophobicCount: number
+  hydrophilicCount: number
+  hydrophobicPercent: number
+  hydrophilicPercent: number
+  averageHydropathy: number
+  buriedCount: number
+  exposedCount: number
+  averageContacts: number
+  mostContacts: ResidueContactSummary | null
+  leastContacts: ResidueContactSummary | null
+}
+
+/**
+ * Calcula estadísticas globales de la proteína: número de residuos hidrofóbicos
+ * e hidrofílicos, hidropatía media (GRAVY), cantidad promedio de contactos por
+ * residuo (≤ 4.5 Å) y qué residuo tiene más y menos contactos.
+ */
+export function computeProteinStats(protein: ParsedProtein): ProteinStats {
+  const total = protein.residues.length
+  if (total === 0) {
+    return {
+      totalResidues: 0,
+      hydrophobicCount: 0,
+      hydrophilicCount: 0,
+      hydrophobicPercent: 0,
+      hydrophilicPercent: 0,
+      averageHydropathy: 0,
+      buriedCount: 0,
+      exposedCount: 0,
+      averageContacts: 0,
+      mostContacts: null,
+      leastContacts: null,
+    }
+  }
+
+  let hydrophobicCount = 0
+  let hydropathySum = 0
+  let buriedCount = 0
+  for (const res of protein.residues) {
+    if (res.aminoAcid.hydropathy > 0) hydrophobicCount++
+    hydropathySum += res.aminoAcid.hydropathy
+    if (res.burial === 'buried') buriedCount++
+  }
+  const hydrophilicCount = total - hydrophobicCount
+  const exposedCount = total - buriedCount
+
+  // Calcular el número de contactos (≤ 4.5 Å) de cada residuo
+  const counts: ResidueContactSummary[] = protein.residues.map((res) => ({
+    residue: res,
+    count: findResidueContacts(protein, res.key).length,
+  }))
+
+  const totalContacts = counts.reduce((sum, item) => sum + item.count, 0)
+  const averageContacts = Number((totalContacts / total).toFixed(1))
+
+  let mostContacts: ResidueContactSummary = counts[0]
+  let leastContacts: ResidueContactSummary = counts[0]
+  for (const item of counts) {
+    if (item.count > mostContacts.count) mostContacts = item
+    if (item.count < leastContacts.count) leastContacts = item
+  }
+
+  return {
+    totalResidues: total,
+    hydrophobicCount,
+    hydrophilicCount,
+    hydrophobicPercent: Math.round((hydrophobicCount / total) * 100),
+    hydrophilicPercent: Math.round((hydrophilicCount / total) * 100),
+    averageHydropathy: Number((hydropathySum / total).toFixed(2)),
+    buriedCount,
+    exposedCount,
+    averageContacts,
+    mostContacts,
+    leastContacts,
+  }
+}
+
 

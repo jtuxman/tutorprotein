@@ -31,6 +31,14 @@ describe('ProteinsTab (Fase 4)', () => {
     expect(screen.getByRole('button', { name: /Mostrar nombres de todos los residuos/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Solo seleccionado y sus contactos/ })).not.toBeDisabled()
     expect(screen.getByRole('checkbox', { name: /Distancias de contacto/ })).not.toBeDisabled()
+
+    // Panel inferior de datos del PDB y cálculos globales
+    expect(screen.getByRole('heading', { name: /Datos del PDB y cálculos globales de 1CRN/ })).toBeInTheDocument()
+    expect(screen.getByText(/Residuos hidrofóbicos/)).toBeInTheDocument()
+    expect(screen.getByText(/Residuos hidrofílicos/)).toBeInTheDocument()
+    expect(screen.getByText(/Promedio de contactos por residuo/)).toBeInTheDocument()
+    expect(screen.getByText(/Residuo con más contactos/)).toBeInTheDocument()
+    expect(screen.getByText(/Residuo con menos contactos/)).toBeInTheDocument()
   })
 
   it('ejecuta el quiz "¿Qué cadena lateral es esta?" con regla anti-spoiler y retroalimentación', () => {

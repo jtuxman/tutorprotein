@@ -154,6 +154,25 @@
 .protein-bottom-panel {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+}
+
+.protein-stats-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.protein-stats-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.protein-stats-header h3 {
+  margin: 0 0 4px;
 }
 
 .residue-inspector {
