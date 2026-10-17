@@ -1,0 +1,1 @@
+export { QuizTab } from './QuizTab'
