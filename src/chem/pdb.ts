@@ -515,12 +515,23 @@ export function parsePdb(rawPdb: string, fallbackId = 'PDB'): ParsedProtein {
   const rawTitle = titleParts.join(' ').replace(/\s+/g, ' ').trim()
   const title = rawTitle ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() : `Estructura ${id}`
 
-  // Recortar al primer modelo si había ENDMDL, asegurar símbolo de elemento en cols 77-78
-  // (para que 3Dmol reconozca hidrógenos tipo '1HB', '2HA' en archivos RMN como 1V90)
-  // y añadir hidrógenos geométricos si el PDB no traía ninguno.
+  // Recortar al primer modelo si había ENDMDL, excluir aguas (HOH/WAT), ANISOU y CONECT
+  // para que 3Dmol no trace líneas espurias al cargar la proteína, asegurar símbolo de
+  // elemento en cols 77-78 y añadir hidrógenos geométricos si el PDB no traía ninguno.
   const endmdlIdx = lines.findIndex((l) => l.slice(0, 6).trim() === 'ENDMDL')
   const singleModelLines = (endmdlIdx >= 0 ? lines.slice(0, endmdlIdx) : lines)
-    .filter((l) => l.slice(0, 6).trim() !== 'END')
+    .filter((l) => {
+      const rec = l.slice(0, 6).trim()
+      if (rec === 'HEADER' || rec === 'TITLE' || rec === 'HELIX' || rec === 'SHEET' || rec === 'TER') {
+        return true
+      }
+      if (rec === 'ATOM') return true
+      if (rec === 'HETATM') {
+        const resName = l.slice(17, 20).trim().toUpperCase()
+        return !SOLVENT_RESNAMES.has(resName)
+      }
+      return false
+    })
     .map((l) => {
       const rec = l.slice(0, 6).trim()
       if (rec !== 'ATOM' && rec !== 'HETATM') return l
