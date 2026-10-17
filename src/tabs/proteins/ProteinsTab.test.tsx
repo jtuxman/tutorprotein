@@ -25,6 +25,12 @@ describe('ProteinsTab (Fase 4)', () => {
     // Seleccionar el residuo Arg 5 desde la barra de secuencia
     fireEvent.click(screen.getByRole('option', { name: 'R5' }))
     expect(screen.getByRole('heading', { name: /Arginina \(Arg 5\)/ })).toBeInTheDocument()
+
+    // Controles de todas las cadenas laterales, nombres de todos los residuos, contactos y distancias
+    expect(screen.getByRole('button', { name: /Todas las cadenas laterales \(bolas y varillas\)/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Mostrar nombres de todos los residuos/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Solo seleccionado y sus contactos/ })).not.toBeDisabled()
+    expect(screen.getByRole('checkbox', { name: /Distancias de contacto/ })).not.toBeDisabled()
   })
 
   it('ejecuta el quiz "¿Qué cadena lateral es esta?" con regla anti-spoiler y retroalimentación', () => {

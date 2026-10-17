@@ -41,6 +41,16 @@ export interface ProteinOverlayOptions {
    * seleccionado y resalta solo su cadena lateral (o el Cα para Gly), ocultando pistas.
    */
   quizSideChainOnly?: boolean
+  /** Muestra las cadenas laterales de todos los residuos en bolas y varillas. */
+  showAllSideChains?: boolean
+  /** Muestra únicamente las cadenas laterales del residuo seleccionado y de los residuos en contacto con él. */
+  onlySelectedAndContacts?: boolean
+  /** Prende o apaga las etiquetas con los nombres de todos los residuos de la proteína. */
+  showAllResidueNames?: boolean
+  /** En el modo de contactos, muestra o esconde los nombres de los residuos en contacto (el seleccionado siempre se muestra). */
+  showContactNames?: boolean
+  /** Muestra líneas discontinuas y distancias (Å) entre el residuo seleccionado y sus contactos. */
+  showContactDistances?: boolean
   showDisulfides?: boolean
   showSaltBridges?: boolean
   showBurial?: boolean

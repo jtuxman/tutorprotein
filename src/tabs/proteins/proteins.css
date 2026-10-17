@@ -113,14 +113,42 @@
   min-height: 460px;
 }
 
+.protein-controls-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-primary-soft);
+}
+
+.protein-sidechain-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 .protein-interactions-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 16px;
   padding-top: 8px;
-  border-top: 1px solid var(--color-primary-soft);
+  border-top: 1px dashed var(--color-primary-soft);
   font-size: 0.86rem;
   font-weight: 700;
+}
+
+.residue-contacts-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  font-size: 0.86rem;
 }
 
 .protein-bottom-panel {

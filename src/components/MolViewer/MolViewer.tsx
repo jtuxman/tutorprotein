@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AtomSpec, GLViewer } from '3dmol'
 import { PHYSIOLOGICAL_PH, netCharge } from '../../chem/charge'
-import { isSideChainOrGlyCa, residueKey } from '../../chem/pdb'
+import { findResidueContacts, isSideChainOrGlyCa, residueKey } from '../../chem/pdb'
 import { ccdCode, findAminoAcid } from '../../data/aminoacids'
 import {
   CLOUD_SCALE,
@@ -400,7 +400,8 @@ export function MolViewer(props: MolViewerProps) {
         )
       } else {
         const colorfunc = proteinColorFunc(state.colorMode, totalRes, chains, pH)
-        viewer.setStyle({}, representationStyle(state.representation, colorfunc))
+        const baseRepStyle = representationStyle(state.representation, colorfunc)
+        viewer.setStyle({}, baseRepStyle)
 
         // Superposición de expuestos/enterrados o sitio de unión a ligando
         if (parsed && proteinOptions?.showBurial) {
@@ -427,6 +428,34 @@ export function MolViewer(props: MolViewerProps) {
           }
         }
 
+        // Mostrar todas las cadenas laterales en bolas y varillas
+        if (proteinOptions?.showAllSideChains && !proteinOptions?.onlySelectedAndContacts) {
+          viewer.setStyle(
+            {},
+            {
+              ...(state.representation === 'cartoon' ? { cartoon: { colorfunc } } : {}),
+              stick: { radius: 0.14, colorfunc },
+              sphere: { scale: 0.24, colorfunc },
+            },
+          )
+        }
+
+        // Mostrar únicamente las cadenas laterales del seleccionado y de los residuos con los que hace contacto
+        if (parsed && selKey && proteinOptions?.onlySelectedAndContacts) {
+          const contacts = findResidueContacts(parsed, selKey)
+          for (const c of contacts) {
+            viewer.setStyle(
+              { chain: c.partner.chain, resi: c.partner.resSeq },
+              {
+                ...(state.representation === 'cartoon' ? { cartoon: { color: '#38bdf8' } } : {}),
+                stick: { radius: 0.18, colorfunc: (atom: AtomSpec) => elementColor(atom.elem ?? 'C') },
+                sphere: { scale: 0.25, colorfunc: (atom: AtomSpec) => elementColor(atom.elem ?? 'C') },
+              },
+            )
+          }
+        }
+
+        // El residuo seleccionado permanece siempre resaltado (enlaces más gruesos y color destacado)
         if (selKey) {
           const [selChain, selResiText] = selKey.split(':')
           const selResi = Number(selResiText)
@@ -434,8 +463,16 @@ export function MolViewer(props: MolViewerProps) {
             { chain: selChain, resi: selResi },
             {
               cartoon: { color: '#f43f5e' },
-              stick: { radius: 0.22, colorfunc: (atom: AtomSpec) => elementColor(atom.elem ?? 'C') },
-              sphere: { scale: 0.28, colorfunc: (atom: AtomSpec) => elementColor(atom.elem ?? 'C') },
+              stick: {
+                radius: 0.28,
+                colorfunc: (atom: AtomSpec) =>
+                  (atom.elem ?? 'C') === 'C' ? '#fbbf24' : elementColor(atom.elem ?? 'C'),
+              },
+              sphere: {
+                scale: 0.34,
+                colorfunc: (atom: AtomSpec) =>
+                  (atom.elem ?? 'C') === 'C' ? '#fbbf24' : elementColor(atom.elem ?? 'C'),
+              },
             },
           )
         }
@@ -563,16 +600,71 @@ export function MolViewer(props: MolViewerProps) {
         }
       }
 
-      if (!quizOnly && !spoilerFree && proteinOptions?.selectedResidueKey) {
-        const res = parsed.residues.find((r) => r.key === proteinOptions.selectedResidueKey)
-        const ca = res?.atoms.find((a) => a.name === 'CA') ?? res?.atoms[0]
-        if (res && ca) {
-          label(`${res.aminoAcid.code3} ${res.resSeq} (${res.chain})`, ca, '#7c3aed')
+      if (!quizOnly && !spoilerFree) {
+        const selKey = proteinOptions?.selectedResidueKey ?? null
+        const contacts = selKey ? findResidueContacts(parsed, selKey) : []
+        const contactKeySet = new Set(contacts.map((c) => c.partnerKey))
+
+        // Nombres de todos los residuos (si está prendido el interruptor)
+        if (proteinOptions?.showAllResidueNames) {
+          for (const r of parsed.residues) {
+            if (r.key === selKey) continue
+            const ca = r.atoms.find((a) => a.name === 'CA') ?? r.atoms[0]
+            if (ca) label(`${r.aminoAcid.code3} ${r.resSeq}`, ca, '#334155')
+          }
+        } else if (selKey && proteinOptions?.showContactNames) {
+          // O nombres de los residuos en contacto cuando se pide ver contactos con nombre
+          for (const r of parsed.residues) {
+            if (!contactKeySet.has(r.key)) continue
+            const ca = r.atoms.find((a) => a.name === 'CA') ?? r.atoms[0]
+            if (ca) label(`${r.aminoAcid.code3} ${r.resSeq}`, ca, '#0284c7')
+          }
         }
-        if (res && state.labels === 'atoms') {
-          for (const atom of res.atoms) {
-            if (atom.element !== 'H' && atom.name && atom.name !== 'CA') {
-              label(atom.name, atom, '#000000')
+
+        // Distancias de contacto del residuo seleccionado con sus vecinos en contacto
+        if (selKey && proteinOptions?.showContactDistances) {
+          for (const c of contacts) {
+            viewer.addCylinder({
+              start: { x: c.fromAtom.x, y: c.fromAtom.y, z: c.fromAtom.z },
+              end: { x: c.toAtom.x, y: c.toAtom.y, z: c.toAtom.z },
+              radius: 0.07,
+              dashed: true,
+              dashLength: 0.22,
+              gapLength: 0.14,
+              color: '#38bdf8',
+              fromCap: 1,
+              toCap: 1,
+            })
+            label(
+              `${c.partner.aminoAcid.code3}${c.partner.resSeq}: ${c.distance} Å`,
+              {
+                x: (c.fromAtom.x + c.toAtom.x) / 2,
+                y: (c.fromAtom.y + c.toAtom.y) / 2,
+                z: (c.fromAtom.z + c.toAtom.z) / 2,
+              },
+              '#0369a1',
+            )
+          }
+        }
+
+        // El residuo seleccionado SIEMPRE muestra su nombre y un halo para distinguirse de los demás
+        if (selKey) {
+          const res = parsed.residues.find((r) => r.key === selKey)
+          const ca = res?.atoms.find((a) => a.name === 'CA') ?? res?.atoms[0]
+          if (res && ca) {
+            viewer.addSphere({
+              center: { x: ca.x, y: ca.y, z: ca.z },
+              radius: 0.9,
+              color: '#fbbf24',
+              opacity: 0.45,
+            })
+            label(`★ ${res.aminoAcid.code3} ${res.resSeq} (${res.chain})`, ca, '#b45309')
+          }
+          if (res && state.labels === 'atoms') {
+            for (const atom of res.atoms) {
+              if (atom.element !== 'H' && atom.name && atom.name !== 'CA') {
+                label(atom.name, atom, '#000000')
+              }
             }
           }
         }

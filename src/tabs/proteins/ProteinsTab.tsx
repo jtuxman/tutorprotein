@@ -3,6 +3,7 @@ import {
   BURIAL_LABELS,
   SECONDARY_STRUCTURE_LABELS,
   explainBurialSense,
+  findResidueContacts,
   parsePdb,
   type ParsedProtein,
 } from '../../chem/pdb'
@@ -35,7 +36,12 @@ export function ProteinsTab() {
   // solo se hace zoom al seleccionar un residuo.
   const [selectedResidueKey, setSelectedResidueKey] = useState<string | null>(null)
 
-  // Interruptores de interacciones en el visor 3D
+  // Interruptores de interacciones y cadenas laterales en el visor 3D
+  const [showAllSideChains, setShowAllSideChains] = useState(false)
+  const [onlySelectedAndContacts, setOnlySelectedAndContacts] = useState(false)
+  const [showAllResidueNames, setShowAllResidueNames] = useState(false)
+  const [showContactNames, setShowContactNames] = useState(true)
+  const [showContactDistances, setShowContactDistances] = useState(false)
   const [showDisulfides, setShowDisulfides] = useState(true)
   const [showSaltBridges, setShowSaltBridges] = useState(true)
   const [showBurial, setShowBurial] = useState(false)
@@ -120,6 +126,11 @@ export function ProteinsTab() {
     if (!selectedResidueKey) return null
     return protein.residues.find((r) => r.key === selectedResidueKey) ?? null
   }, [activeQuestion, protein, selectedResidueKey])
+
+  const activeContacts = useMemo(
+    () => findResidueContacts(protein, activeResidue?.key ?? null),
+    [protein, activeResidue],
+  )
 
   const handleAnswerQuiz = (optionId: string) => {
     if (!activeQuestion || answered) return
@@ -332,6 +343,11 @@ export function ProteinsTab() {
           proteinOptions={{
             selectedResidueKey: activeResidue?.key ?? null,
             quizSideChainOnly: hideSideChainSpoilers,
+            showAllSideChains,
+            onlySelectedAndContacts,
+            showAllResidueNames,
+            showContactNames,
+            showContactDistances,
             showDisulfides,
             showSaltBridges,
             showBurial,
@@ -342,45 +358,106 @@ export function ProteinsTab() {
           }}
         />
 
-        <div className="protein-interactions-bar" role="group" aria-label="Interruptores de interacciones">
-          <label className="mol-toolbar__check">
-            <input
-              type="checkbox"
-              checked={showDisulfides}
+        <div className="protein-controls-section" role="group" aria-label="Controles de cadenas laterales y contactos">
+          <div className="protein-sidechain-bar">
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={showAllSideChains && !onlySelectedAndContacts}
               disabled={hideSideChainSpoilers}
-              onChange={(e) => setShowDisulfides(e.target.checked)}
-            />
-            Puentes disulfuro ({protein.disulfides.length})
-          </label>
-          <label className="mol-toolbar__check">
-            <input
-              type="checkbox"
-              checked={showSaltBridges}
+              onClick={() => {
+                setOnlySelectedAndContacts(false)
+                setShowAllSideChains((v) => !v)
+              }}
+            >
+              🫧 Todas las cadenas laterales (bolas y varillas)
+            </button>
+
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={showAllResidueNames}
               disabled={hideSideChainSpoilers}
-              onChange={(e) => setShowSaltBridges(e.target.checked)}
-            />
-            Puentes salinos ({protein.saltBridges.length})
-          </label>
-          <label className="mol-toolbar__check">
-            <input
-              type="checkbox"
-              checked={showBurial}
-              disabled={hideSideChainSpoilers}
-              onChange={(e) => setShowBurial(e.target.checked)}
-            />
-            Expuestos (cian) vs. enterrados (ámbar)
-          </label>
-          {protein.ligandNames.length > 0 && (
+              onClick={() => setShowAllResidueNames((v) => !v)}
+            >
+              🏷️ {showAllResidueNames ? 'Ocultar nombres de todos los residuos' : 'Mostrar nombres de todos los residuos'}
+            </button>
+
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={onlySelectedAndContacts}
+              disabled={hideSideChainSpoilers || !activeResidue}
+              title={!activeResidue ? 'Selecciona primero un residuo en la secuencia o en el 3D' : undefined}
+              onClick={() => {
+                setOnlySelectedAndContacts((v) => !v)
+                if (!onlySelectedAndContacts) setShowAllSideChains(false)
+              }}
+            >
+              🤝 Solo seleccionado y sus contactos ({activeContacts.length})
+            </button>
+
             <label className="mol-toolbar__check">
               <input
                 type="checkbox"
-                checked={showLigandSite}
-                disabled={hideSideChainSpoilers}
-                onChange={(e) => setShowLigandSite(e.target.checked)}
+                checked={showContactNames}
+                disabled={hideSideChainSpoilers || !activeResidue}
+                onChange={(e) => setShowContactNames(e.target.checked)}
               />
-              Sitio de unión a ligando (&lt; 5 Å)
+              Nombres en contactos (seleccionado siempre con nombre)
             </label>
-          )}
+
+            <label className="mol-toolbar__check">
+              <input
+                type="checkbox"
+                checked={showContactDistances}
+                disabled={hideSideChainSpoilers || !activeResidue}
+                onChange={(e) => setShowContactDistances(e.target.checked)}
+              />
+              📏 Distancias de contacto (Å)
+            </label>
+          </div>
+
+          <div className="protein-interactions-bar" role="group" aria-label="Interruptores de interacciones">
+            <label className="mol-toolbar__check">
+              <input
+                type="checkbox"
+                checked={showDisulfides}
+                disabled={hideSideChainSpoilers}
+                onChange={(e) => setShowDisulfides(e.target.checked)}
+              />
+              Puentes disulfuro ({protein.disulfides.length})
+            </label>
+            <label className="mol-toolbar__check">
+              <input
+                type="checkbox"
+                checked={showSaltBridges}
+                disabled={hideSideChainSpoilers}
+                onChange={(e) => setShowSaltBridges(e.target.checked)}
+              />
+              Puentes salinos ({protein.saltBridges.length})
+            </label>
+            <label className="mol-toolbar__check">
+              <input
+                type="checkbox"
+                checked={showBurial}
+                disabled={hideSideChainSpoilers}
+                onChange={(e) => setShowBurial(e.target.checked)}
+              />
+              Expuestos (cian) vs. enterrados (ámbar)
+            </label>
+            {protein.ligandNames.length > 0 && (
+              <label className="mol-toolbar__check">
+                <input
+                  type="checkbox"
+                  checked={showLigandSite}
+                  disabled={hideSideChainSpoilers}
+                  onChange={(e) => setShowLigandSite(e.target.checked)}
+                />
+                Sitio de unión a ligando (&lt; 5 Å)
+              </label>
+            )}
+          </div>
         </div>
       </section>
 
@@ -458,6 +535,25 @@ export function ProteinsTab() {
                       </dd>
                     </div>
                   </dl>
+
+                  {activeContacts.length > 0 && (
+                    <div className="residue-contacts-box">
+                      <strong>Residuos en contacto (≤ 4.5 Å):</strong>
+                      <div className="filter-bar__chips">
+                        {activeContacts.map((c) => (
+                          <button
+                            key={c.partnerKey}
+                            type="button"
+                            className="chip"
+                            onClick={() => setSelectedResidueKey(c.partnerKey)}
+                          >
+                            {c.partner.aminoAcid.code3} {c.partner.resSeq} ({c.fromAtom.name}↔{c.toAtom.name}:{' '}
+                            <strong>{c.distance} Å</strong>)
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <p className="residue-sense-box">{explainBurialSense(activeResidue).explanation}</p>
                 </div>

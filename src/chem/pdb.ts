@@ -609,3 +609,67 @@ export function explainBurialSense(residue: ProteinResidue): { makesSense: boole
 export function listStandardCodes(): string[] {
   return AMINO_ACIDS.map((aa) => aa.code3)
 }
+
+export interface ResidueContact {
+  partnerKey: string
+  partner: ProteinResidue
+  distance: number
+  fromAtom: PdbAtom
+  toAtom: PdbAtom
+}
+
+/**
+ * Encuentra los residuos de la proteína que hacen contacto espacial con el
+ * residuo `selectedKey` (distancia mínima entre átomos pesados <= `cutoff` Å).
+ * Para los vecinos inmediatos de secuencia (i-1, i+1), exige que en el contacto
+ * participe al menos un átomo de cadena lateral para no contar el propio enlace peptídico.
+ */
+export function findResidueContacts(
+  protein: ParsedProtein,
+  selectedKey: string | null | undefined,
+  cutoff = 4.5,
+): ResidueContact[] {
+  if (!selectedKey) return []
+  const target = protein.residues.find((r) => r.key === selectedKey)
+  if (!target) return []
+  const targetHeavy = target.atoms.filter((a) => a.element !== 'H')
+  const contacts: ResidueContact[] = []
+
+  for (const other of protein.residues) {
+    if (other.key === target.key) continue
+    const isSequenceNeighbor =
+      other.chain === target.chain && Math.abs(other.resSeq - target.resSeq) === 1
+    const otherHeavy = other.atoms.filter((a) => a.element !== 'H')
+
+    let bestDist = Infinity
+    let bestFrom: PdbAtom | null = null
+    let bestTo: PdbAtom | null = null
+
+    for (const a of targetHeavy) {
+      for (const b of otherHeavy) {
+        if (isSequenceNeighbor && BACKBONE_ATOMS.includes(a.name) && BACKBONE_ATOMS.includes(b.name)) {
+          continue
+        }
+        const d = distance(a, b)
+        if (d < bestDist) {
+          bestDist = d
+          bestFrom = a
+          bestTo = b
+        }
+      }
+    }
+
+    if (bestDist <= cutoff && bestFrom && bestTo) {
+      contacts.push({
+        partnerKey: other.key,
+        partner: other,
+        distance: Number(bestDist.toFixed(2)),
+        fromAtom: bestFrom,
+        toAtom: bestTo,
+      })
+    }
+  }
+
+  return contacts.sort((a, b) => a.distance - b.distance)
+}
+
