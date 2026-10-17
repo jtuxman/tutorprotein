@@ -11,7 +11,7 @@ import { StructureBuilder3D } from './StructureBuilder3D'
 import { EMPTY_FILTERS, applyFilters, toggle, type Filters } from './filters'
 import './classification.css'
 
-type Section = 'catalog' | 'ph' | 'builder' | 'builder3d' | 'mutations'
+type Section = 'catalog' | 'ph' | 'builder' | 'builder3d' | 'trio3d' | 'mutations'
 type CatalogView =
   | { kind: 'list' }
   | { kind: 'detail'; code: string }
@@ -105,6 +105,14 @@ export function ClassificationTab() {
       <button
         type="button"
         className="chip"
+        aria-pressed={section === 'trio3d'}
+        onClick={() => switchSection('trio3d')}
+      >
+        🎮 Juego: 3 en 3D
+      </button>
+      <button
+        type="button"
+        className="chip"
         aria-pressed={section === 'mutations'}
         onClick={() => switchSection('mutations')}
       >
@@ -135,7 +143,16 @@ export function ClassificationTab() {
     return (
       <div className="classification">
         {subnav}
-        <StructureBuilder3D key={toolAminoAcid?.code3 ?? 'default'} initialAminoAcid={toolAminoAcid} />
+        <StructureBuilder3D key={`build-${toolAminoAcid?.code3 ?? 'default'}`} initialAminoAcid={toolAminoAcid} initialMode="build" />
+      </div>
+    )
+  }
+
+  if (section === 'trio3d') {
+    return (
+      <div className="classification">
+        {subnav}
+        <StructureBuilder3D key={`trio-${toolAminoAcid?.code3 ?? 'default'}`} initialAminoAcid={toolAminoAcid} initialMode="trio-game" />
       </div>
     )
   }

@@ -12,6 +12,7 @@ type SectionMode = 'build' | 'trio-game'
 
 export interface StructureBuilder3DProps {
   initialAminoAcid?: AminoAcid
+  initialMode?: SectionMode
 }
 
 /** Construye el trío de candidatos en 3D (el correcto + 2 distractores plausibles). */
@@ -20,8 +21,8 @@ function buildTrioCandidates(target: AminoAcid): AminoAcid[] {
   return shuffle([target, ...distractors])
 }
 
-export function StructureBuilder3D({ initialAminoAcid }: StructureBuilder3DProps) {
-  const [sectionMode, setSectionMode] = useState<SectionMode>('build')
+export function StructureBuilder3D({ initialAminoAcid, initialMode = 'build' }: StructureBuilder3DProps) {
+  const [sectionMode, setSectionMode] = useState<SectionMode>(initialMode)
   const [target, setTarget] = useState<AminoAcid>(
     () => initialAminoAcid ?? AMINO_ACIDS.find((aa) => aa.code3 === 'Asp') ?? AMINO_ACIDS[0],
   )
