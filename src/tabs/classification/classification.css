@@ -1435,5 +1435,78 @@
   font-weight: 700;
 }
 
+.trio-scoreboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.trio-3d-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.trio-3d-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid var(--color-primary-soft);
+  border-radius: 16px;
+  background: #faf7ff;
+  min-width: 0;
+}
+
+.trio-3d-card--correct {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+.trio-3d-card--wrong {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.trio-3d-card__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.trio-3d-card__badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.trio-3d-card__reveal {
+  font-size: 0.9rem;
+}
+
+.trio-3d-card__meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.trio-3d-card__choose {
+  width: 100%;
+  margin-top: auto;
+}
+
+@media (max-width: 900px) {
+  .trio-3d-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+
 
 
