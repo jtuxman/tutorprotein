@@ -36,14 +36,14 @@ export function ProteinsTab() {
   // solo se hace zoom al seleccionar un residuo.
   const [selectedResidueKey, setSelectedResidueKey] = useState<string | null>(null)
 
-  // Interruptores de interacciones y cadenas laterales en el visor 3D
+  // Interruptores de interacciones y cadenas laterales en el visor 3D (apagados al cargar)
   const [showAllSideChains, setShowAllSideChains] = useState(false)
   const [onlySelectedAndContacts, setOnlySelectedAndContacts] = useState(false)
   const [showAllResidueNames, setShowAllResidueNames] = useState(false)
   const [showContactNames, setShowContactNames] = useState(true)
   const [showContactDistances, setShowContactDistances] = useState(false)
-  const [showDisulfides, setShowDisulfides] = useState(true)
-  const [showSaltBridges, setShowSaltBridges] = useState(true)
+  const [showDisulfides, setShowDisulfides] = useState(false)
+  const [showSaltBridges, setShowSaltBridges] = useState(false)
   const [showBurial, setShowBurial] = useState(false)
   const [showLigandSite, setShowLigandSite] = useState(false)
 
@@ -60,8 +60,16 @@ export function ProteinsTab() {
       throw new Error('El archivo no contiene residuos de los 20 aminoácidos estándar.')
     }
     setProtein(parsed)
-    // Al cargar una proteína se muestra entera (sin zoom a ningún residuo)
+    // Al cargar una proteína se muestra entera y sin superposiciones activas
     setSelectedResidueKey(null)
+    setShowAllSideChains(false)
+    setOnlySelectedAndContacts(false)
+    setShowAllResidueNames(false)
+    setShowContactDistances(false)
+    setShowDisulfides(false)
+    setShowSaltBridges(false)
+    setShowBurial(false)
+    setShowLigandSite(false)
     setMode('explore')
     setQuestions([])
     setLoadError(null)
