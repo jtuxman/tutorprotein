@@ -69,6 +69,8 @@ export interface MolViewerProps extends Partial<MolViewerState> {
   spoilerFree?: boolean
   /** Muestra la barra de herramientas del kit (por defecto, sí). */
   toolbar?: boolean
+  /** Posición de la barra de herramientas respecto al lienzo 3D ('top' por defecto, 'bottom' en proteínas). */
+  toolbarPosition?: 'top' | 'bottom'
   onStateChange?: (state: MolViewerState) => void
 }
 

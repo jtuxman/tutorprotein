@@ -515,11 +515,20 @@ export function parsePdb(rawPdb: string, fallbackId = 'PDB'): ParsedProtein {
   const rawTitle = titleParts.join(' ').replace(/\s+/g, ' ').trim()
   const title = rawTitle ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() : `Estructura ${id}`
 
-  // Recortar al primer modelo si había ENDMDL y añadir hidrógenos geométricos si el PDB no traía ninguno
+  // Recortar al primer modelo si había ENDMDL, asegurar símbolo de elemento en cols 77-78
+  // (para que 3Dmol reconozca hidrógenos tipo '1HB', '2HA' en archivos RMN como 1V90)
+  // y añadir hidrógenos geométricos si el PDB no traía ninguno.
   const endmdlIdx = lines.findIndex((l) => l.slice(0, 6).trim() === 'ENDMDL')
-  const singleModelLines = (endmdlIdx >= 0 ? lines.slice(0, endmdlIdx) : lines).filter(
-    (l) => l.slice(0, 6).trim() !== 'END',
-  )
+  const singleModelLines = (endmdlIdx >= 0 ? lines.slice(0, endmdlIdx) : lines)
+    .filter((l) => l.slice(0, 6).trim() !== 'END')
+    .map((l) => {
+      const rec = l.slice(0, 6).trim()
+      if (rec !== 'ATOM' && rec !== 'HETATM') return l
+      const name = l.slice(12, 16).trim()
+      const elem = deduceElement(name, l.slice(76, 78))
+      const padded = l.padEnd(78, ' ')
+      return `${padded.slice(0, 76)}${elem.padStart(2, ' ')}${padded.slice(78)}`
+    })
   const hasAnyHydrogen = atoms.some((a) => a.element === 'H')
   const maxSerial = atoms.reduce((m, a) => Math.max(m, a.serial), 0)
   const extraH = hasAnyHydrogen ? [] : synthesizeMissingHydrogens(residues, maxSerial + 1)

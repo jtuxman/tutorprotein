@@ -31,9 +31,9 @@ export function ProteinsTab() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [mode, setMode] = useState<ProteinMode>('explore')
-  const [selectedResidueKey, setSelectedResidueKey] = useState<string | null>(
-    () => protein.residues[1]?.key ?? protein.residues[0]?.key ?? null,
-  )
+  // Al cargar la proteína empieza en `null` para que se vea toda la estructura completa;
+  // solo se hace zoom al seleccionar un residuo.
+  const [selectedResidueKey, setSelectedResidueKey] = useState<string | null>(null)
 
   // Interruptores de interacciones en el visor 3D
   const [showDisulfides, setShowDisulfides] = useState(true)
@@ -54,7 +54,8 @@ export function ProteinsTab() {
       throw new Error('El archivo no contiene residuos de los 20 aminoácidos estándar.')
     }
     setProtein(parsed)
-    setSelectedResidueKey(parsed.residues[0]?.key ?? null)
+    // Al cargar una proteína se muestra entera (sin zoom a ningún residuo)
+    setSelectedResidueKey(null)
     setMode('explore')
     setQuestions([])
     setLoadError(null)
@@ -116,7 +117,8 @@ export function ProteinsTab() {
   const answered = chosenOptionId !== null
   const activeResidue = useMemo(() => {
     if (activeQuestion) return activeQuestion.residue
-    return protein.residues.find((r) => r.key === selectedResidueKey) ?? protein.residues[0] ?? null
+    if (!selectedResidueKey) return null
+    return protein.residues.find((r) => r.key === selectedResidueKey) ?? null
   }, [activeQuestion, protein, selectedResidueKey])
 
   const handleAnswerQuiz = (optionId: string) => {
@@ -273,16 +275,24 @@ export function ProteinsTab() {
         </button>
       </nav>
 
-      {/* Barra de secuencia sincronizada con el 3D (se oculta mientras hay pregunta anti-spoiler sin contestar) */}
-      <section className="panel sequence-panel" aria-label="Barra de secuencia sincronizada">
+      {/* Barra de secuencia y visor 3D juntos en un bloque amplio */}
+      <section className="panel protein-stage-card" aria-label="Secuencia y visor 3D de la proteína">
         <div className="sequence-panel__header">
-          <strong>Barra de secuencia ({protein.residues.length} residuos)</strong>
-          <span className="panel__caption">
-            {hideSideChainSpoilers
-              ? 'Modo anti-spoiler activo: las letras de secuencia se ocultan hasta responder.'
-              : 'Toca cualquier residuo de la secuencia o del visor 3D para enfocarlo e inspeccionarlo.'}
-          </span>
+          <div>
+            <strong>Barra de secuencia ({protein.residues.length} residuos)</strong>{' '}
+            <span className="panel__caption">
+              {hideSideChainSpoilers
+                ? 'Modo anti-spoiler activo: las letras de secuencia se ocultan hasta responder.'
+                : 'Toca un residuo para hacer zoom sobre él; al cargar la proteína se muestra completa.'}
+            </span>
+          </div>
+          {mode === 'explore' && selectedResidueKey !== null && (
+            <button type="button" className="pill-button" onClick={() => setSelectedResidueKey(null)}>
+              🔭 Ver proteína completa
+            </button>
+          )}
         </div>
+
         <div className="sequence-bar" role="listbox" aria-label="Secuencia de aminoácidos">
           {protein.residues.map((res) => {
             const isSelected = activeResidue?.key === res.key
@@ -306,7 +316,7 @@ export function ProteinsTab() {
                     ? `Posición ${res.resSeq}`
                     : `${res.aminoAcid.name} (${res.aminoAcid.code3} ${res.resSeq}, cadena ${res.chain})`
                 }
-                onClick={() => setSelectedResidueKey(res.key)}
+                onClick={() => setSelectedResidueKey((prev) => (prev === res.key ? null : res.key))}
               >
                 <span className="seq-residue__code">{hideSideChainSpoilers ? '?' : res.aminoAcid.code1}</span>
                 <span className="seq-residue__num">{res.resSeq}</span>
@@ -314,143 +324,150 @@ export function ProteinsTab() {
             )
           })}
         </div>
+
+        <MolViewer
+          molecule={{ kind: 'pdb', id: protein.id, data: protein.rawPdb, parsed: protein }}
+          spoilerFree={hideSideChainSpoilers}
+          toolbarPosition="bottom"
+          proteinOptions={{
+            selectedResidueKey: activeResidue?.key ?? null,
+            quizSideChainOnly: hideSideChainSpoilers,
+            showDisulfides,
+            showSaltBridges,
+            showBurial,
+            showLigandSite,
+            onResidueClick: (key) => {
+              if (mode === 'explore') setSelectedResidueKey(key)
+            },
+          }}
+        />
+
+        <div className="protein-interactions-bar" role="group" aria-label="Interruptores de interacciones">
+          <label className="mol-toolbar__check">
+            <input
+              type="checkbox"
+              checked={showDisulfides}
+              disabled={hideSideChainSpoilers}
+              onChange={(e) => setShowDisulfides(e.target.checked)}
+            />
+            Puentes disulfuro ({protein.disulfides.length})
+          </label>
+          <label className="mol-toolbar__check">
+            <input
+              type="checkbox"
+              checked={showSaltBridges}
+              disabled={hideSideChainSpoilers}
+              onChange={(e) => setShowSaltBridges(e.target.checked)}
+            />
+            Puentes salinos ({protein.saltBridges.length})
+          </label>
+          <label className="mol-toolbar__check">
+            <input
+              type="checkbox"
+              checked={showBurial}
+              disabled={hideSideChainSpoilers}
+              onChange={(e) => setShowBurial(e.target.checked)}
+            />
+            Expuestos (cian) vs. enterrados (ámbar)
+          </label>
+          {protein.ligandNames.length > 0 && (
+            <label className="mol-toolbar__check">
+              <input
+                type="checkbox"
+                checked={showLigandSite}
+                disabled={hideSideChainSpoilers}
+                onChange={(e) => setShowLigandSite(e.target.checked)}
+              />
+              Sitio de unión a ligando (&lt; 5 Å)
+            </label>
+          )}
+        </div>
       </section>
 
-      <div className="protein-workspace">
-        <section className="panel protein-viewer-panel" aria-label="Visor 3D de la proteína">
-          <div className="protein-interactions-bar" role="group" aria-label="Interruptores de interacciones">
-            <label className="mol-toolbar__check">
-              <input
-                type="checkbox"
-                checked={showDisulfides}
-                disabled={hideSideChainSpoilers}
-                onChange={(e) => setShowDisulfides(e.target.checked)}
-              />
-              Puentes disulfuro ({protein.disulfides.length})
-            </label>
-            <label className="mol-toolbar__check">
-              <input
-                type="checkbox"
-                checked={showSaltBridges}
-                disabled={hideSideChainSpoilers}
-                onChange={(e) => setShowSaltBridges(e.target.checked)}
-              />
-              Puentes salinos ({protein.saltBridges.length})
-            </label>
-            <label className="mol-toolbar__check">
-              <input
-                type="checkbox"
-                checked={showBurial}
-                disabled={hideSideChainSpoilers}
-                onChange={(e) => setShowBurial(e.target.checked)}
-              />
-              Expuestos (cian) vs. enterrados (ámbar)
-            </label>
-            {protein.ligandNames.length > 0 && (
-              <label className="mol-toolbar__check">
-                <input
-                  type="checkbox"
-                  checked={showLigandSite}
-                  disabled={hideSideChainSpoilers}
-                  onChange={(e) => setShowLigandSite(e.target.checked)}
-                />
-                Sitio de unión a ligando (&lt; 5 Å)
-              </label>
-            )}
-          </div>
-
-          <MolViewer
-            molecule={{ kind: 'pdb', id: protein.id, data: protein.rawPdb, parsed: protein }}
-            spoilerFree={hideSideChainSpoilers}
-            proteinOptions={{
-              selectedResidueKey: activeResidue?.key ?? null,
-              quizSideChainOnly: hideSideChainSpoilers,
-              showDisulfides,
-              showSaltBridges,
-              showBurial,
-              showLigandSite,
-              onResidueClick: (key) => {
-                if (mode === 'explore') setSelectedResidueKey(key)
-              },
-            }}
-          />
-        </section>
-
+      <div className="protein-bottom-panel">
         {mode === 'explore' ? (
           <section className="panel residue-inspector" aria-label="Ficha del residuo seleccionado">
             {activeResidue ? (
-              <>
-                <header className="residue-inspector__header">
-                  <span
-                    className="aa-detail__letter"
-                    style={{ '--group-color': `var(${GROUPS[activeResidue.aminoAcid.group].cssVar})` } as React.CSSProperties}
-                  >
-                    {activeResidue.aminoAcid.code1}
-                  </span>
-                  <div>
-                    <h3>
-                      {activeResidue.aminoAcid.name} ({activeResidue.aminoAcid.code3} {activeResidue.resSeq})
-                    </h3>
-                    <p className="panel__caption">
-                      Cadena <strong>{activeResidue.chain}</strong> · <GroupBadge aminoAcid={activeResidue.aminoAcid} />
-                    </p>
-                  </div>
-                </header>
+              <div className="residue-inspector__grid">
+                <div className="residue-inspector__left">
+                  <header className="residue-inspector__header">
+                    <span
+                      className="aa-detail__letter"
+                      style={{ '--group-color': `var(${GROUPS[activeResidue.aminoAcid.group].cssVar})` } as React.CSSProperties}
+                    >
+                      {activeResidue.aminoAcid.code1}
+                    </span>
+                    <div>
+                      <h3>
+                        {activeResidue.aminoAcid.name} ({activeResidue.aminoAcid.code3} {activeResidue.resSeq})
+                      </h3>
+                      <p className="panel__caption">
+                        Cadena <strong>{activeResidue.chain}</strong> · <GroupBadge aminoAcid={activeResidue.aminoAcid} />
+                      </p>
+                    </div>
+                  </header>
 
-                <Structure2D
-                  smiles={activeResidue.aminoAcid.smiles}
-                  size={165}
-                  ariaLabel={`Estructura 2D de ${activeResidue.aminoAcid.name}`}
-                />
+                  <Structure2D
+                    smiles={activeResidue.aminoAcid.smiles}
+                    size={165}
+                    ariaLabel={`Estructura 2D de ${activeResidue.aminoAcid.name}`}
+                  />
+                </div>
 
-                <dl className="residue-props">
-                  <div>
-                    <dt>Estructura secundaria</dt>
-                    <dd>{SECONDARY_STRUCTURE_LABELS[activeResidue.secondaryStructure]}</dd>
-                  </div>
-                  <div>
-                    <dt>Ángulos diedros (φ, ψ)</dt>
-                    <dd>
-                      φ = {activeResidue.phi !== null ? `${activeResidue.phi}°` : 'N-terminal'} · ψ ={' '}
-                      {activeResidue.psi !== null ? `${activeResidue.psi}°` : 'C-terminal'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Exposición al solvente</dt>
-                    <dd>
-                      {BURIAL_LABELS[activeResidue.burial]} ({activeResidue.neighborCount} residuos vecinos)
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Hidropatía (Kyte-Doolittle)</dt>
-                    <dd>
-                      {activeResidue.aminoAcid.hydropathy > 0
-                        ? `+${activeResidue.aminoAcid.hydropathy} (hidrofóbico)`
-                        : `${activeResidue.aminoAcid.hydropathy} (hidrofílico)`}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Puente disulfuro</dt>
-                    <dd>
-                      {activeResidue.disulfidePartner
-                        ? `Sí, enlazado con Cys ${activeResidue.disulfidePartner}`
-                        : 'No participa'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Puentes salinos</dt>
-                    <dd>
-                      {activeResidue.saltBridgePartners.length > 0
-                        ? `Sí, con ${activeResidue.saltBridgePartners.join(', ')}`
-                        : 'Ninguno detectado'}
-                    </dd>
-                  </div>
-                </dl>
+                <div className="residue-inspector__right">
+                  <dl className="residue-props">
+                    <div>
+                      <dt>Estructura secundaria</dt>
+                      <dd>{SECONDARY_STRUCTURE_LABELS[activeResidue.secondaryStructure]}</dd>
+                    </div>
+                    <div>
+                      <dt>Ángulos diedros (φ, ψ)</dt>
+                      <dd>
+                        φ = {activeResidue.phi !== null ? `${activeResidue.phi}°` : 'N-terminal'} · ψ ={' '}
+                        {activeResidue.psi !== null ? `${activeResidue.psi}°` : 'C-terminal'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Exposición al solvente</dt>
+                      <dd>
+                        {BURIAL_LABELS[activeResidue.burial]} ({activeResidue.neighborCount} residuos vecinos)
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Hidropatía (Kyte-Doolittle)</dt>
+                      <dd>
+                        {activeResidue.aminoAcid.hydropathy > 0
+                          ? `+${activeResidue.aminoAcid.hydropathy} (hidrofóbico)`
+                          : `${activeResidue.aminoAcid.hydropathy} (hidrofílico)`}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Puente disulfuro</dt>
+                      <dd>
+                        {activeResidue.disulfidePartner
+                          ? `Sí, enlazado con Cys ${activeResidue.disulfidePartner}`
+                          : 'No participa'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Puentes salinos</dt>
+                      <dd>
+                        {activeResidue.saltBridgePartners.length > 0
+                          ? `Sí, con ${activeResidue.saltBridgePartners.join(', ')}`
+                          : 'Ninguno detectado'}
+                      </dd>
+                    </div>
+                  </dl>
 
-                <p className="residue-sense-box">{explainBurialSense(activeResidue).explanation}</p>
-              </>
+                  <p className="residue-sense-box">{explainBurialSense(activeResidue).explanation}</p>
+                </div>
+              </div>
             ) : (
-              <p>Selecciona un residuo en la barra de secuencia o en el visor 3D.</p>
+              <p className="panel__caption">
+                🔭 <strong>Vista de la proteína completa.</strong> Toca cualquier residuo en la barra de secuencia o
+                directamente en el modelo 3D para hacer zoom sobre él y ver aquí su estructura 2D, ángulos φ/ψ,
+                exposición e interacciones.
+              </p>
             )}
           </section>
         ) : (

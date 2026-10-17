@@ -146,6 +146,7 @@ export function MolViewer(props: MolViewerProps) {
     proteinOptions,
     spoilerFree = false,
     toolbar = true,
+    toolbarPosition = 'top',
     onStateChange,
   } = props
   const { representation, colorMode, surface, surfaceOpacity, showHydrogens, labels } = props
@@ -397,7 +398,6 @@ export function MolViewer(props: MolViewerProps) {
             },
           },
         )
-        viewer.zoomTo({ chain: selChain, resi: selResi })
       } else {
         const colorfunc = proteinColorFunc(state.colorMode, totalRes, chains, pH)
         viewer.setStyle({}, representationStyle(state.representation, colorfunc))
@@ -438,11 +438,10 @@ export function MolViewer(props: MolViewerProps) {
               sphere: { scale: 0.28, colorfunc: (atom: AtomSpec) => elementColor(atom.elem ?? 'C') },
             },
           )
-          viewer.zoomTo({ chain: selChain, resi: selResi })
         }
 
         // Si la representación está en Cintas (cartoon) y se activa «Mostrar hidrógenos»,
-        // dibujar también los hidrógenos en varillas/esferas para que sean visibles.
+        // dibujar también los hidrógenos en varillas/esferas blancas para que sean visibles.
         if (state.showHydrogens && state.representation === 'cartoon') {
           viewer.setStyle(
             { elem: 'H' },
@@ -483,6 +482,19 @@ export function MolViewer(props: MolViewerProps) {
     state.colorMode,
     state.showHydrogens,
   ])
+
+  // En proteínas: hace zoom únicamente cuando cambia el residuo seleccionado; si es `null`, encuadra la proteína entera.
+  const selectedResidueKey = proteinOptions?.selectedResidueKey ?? null
+  useEffect(() => {
+    if (!ready || !viewer || !scene || molecule.kind !== 'pdb') return
+    if (selectedResidueKey) {
+      const [selChain, selResiText] = selectedResidueKey.split(':')
+      viewer.zoomTo({ chain: selChain, resi: Number(selResiText) })
+    } else {
+      viewer.zoomTo()
+    }
+    viewer.render()
+  }, [ready, viewer, scene, molecule.kind, selectedResidueKey])
 
   // Etiquetas de átomo, interacciones de proteína (disulfuros, puentes salinos) y medidas.
   useEffect(() => {
@@ -680,24 +692,26 @@ export function MolViewer(props: MolViewerProps) {
         ? `Visor 3D de la proteína ${molecule.id}`
         : 'Visor 3D de la molécula'
 
+  const toolbarElement = toolbar && (
+    <Toolbar
+      state={state}
+      onChange={update}
+      spoilerFree={spoilerFree}
+      hasAminoAcid={hasAminoAcid}
+      isProtein={isProtein}
+      disabled={!ready}
+      onReset={reset}
+      onCapture={capture}
+      measureKind={measureKind}
+      onMeasureKindChange={changeMeasureKind}
+      hasMeasurements={measurements.length > 0 || picks.length > 0}
+      onClearMeasurements={clearMeasurements}
+    />
+  )
+
   return (
-    <div className="mol-viewer">
-      {toolbar && (
-        <Toolbar
-          state={state}
-          onChange={update}
-          spoilerFree={spoilerFree}
-          hasAminoAcid={hasAminoAcid}
-          isProtein={isProtein}
-          disabled={!ready}
-          onReset={reset}
-          onCapture={capture}
-          measureKind={measureKind}
-          onMeasureKindChange={changeMeasureKind}
-          hasMeasurements={measurements.length > 0 || picks.length > 0}
-          onClearMeasurements={clearMeasurements}
-        />
-      )}
+    <div className={`mol-viewer${isProtein ? ' mol-viewer--protein' : ''}`}>
+      {toolbarPosition === 'top' && toolbarElement}
       <div className="mol-viewer__stage">
         <div ref={canvasRef} className="mol-viewer__canvas" role="img" aria-label={title} />
         {measureKind && status === 'ready' && (
@@ -718,6 +732,7 @@ export function MolViewer(props: MolViewerProps) {
         )}
       </div>
       {!spoilerFree && <Legend state={state} aminoAcid={aminoAcid} pH={pH} />}
+      {toolbarPosition === 'bottom' && toolbarElement}
     </div>
   )
 }

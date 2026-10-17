@@ -102,23 +102,53 @@
   color: var(--color-muted);
 }
 
-.protein-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
+.protein-stage-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.protein-stage-card .mol-viewer--protein .mol-viewer__stage {
+  aspect-ratio: 16 / 9;
+  min-height: 460px;
 }
 
 .protein-interactions-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 16px;
-  margin-bottom: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-primary-soft);
   font-size: 0.86rem;
   font-weight: 700;
 }
 
+.protein-bottom-panel {
+  display: flex;
+  flex-direction: column;
+}
+
 .residue-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.residue-inspector__grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.residue-inspector__left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.residue-inspector__right {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -128,6 +158,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
 }
 
 .residue-inspector__header h3 {
@@ -136,7 +167,7 @@
 
 .residue-props {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px 12px;
   margin: 0;
 }
@@ -177,7 +208,12 @@
 }
 
 @media (max-width: 860px) {
-  .protein-workspace {
+  .protein-stage-card .mol-viewer--protein .mol-viewer__stage {
+    aspect-ratio: 4 / 3;
+    min-height: 300px;
+  }
+
+  .residue-inspector__grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
