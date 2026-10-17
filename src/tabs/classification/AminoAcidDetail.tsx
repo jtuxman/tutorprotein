@@ -12,6 +12,7 @@ interface AminoAcidDetailProps {
   onCompare: (first: AminoAcid, second: AminoAcid) => void
   onOpenPhSimulator?: (aminoAcid: AminoAcid) => void
   onOpenBuilder?: (aminoAcid: AminoAcid) => void
+  onOpenBuilder3D?: (aminoAcid: AminoAcid) => void
 }
 
 export function AminoAcidDetail({
@@ -21,6 +22,7 @@ export function AminoAcidDetail({
   onCompare,
   onOpenPhSimulator,
   onOpenBuilder,
+  onOpenBuilder3D,
 }: AminoAcidDetailProps) {
   const index = AMINO_ACIDS.indexOf(aminoAcid)
   const previous = AMINO_ACIDS[(index - 1 + AMINO_ACIDS.length) % AMINO_ACIDS.length]
@@ -86,7 +88,12 @@ export function AminoAcidDetail({
         )}
         {onOpenBuilder && (
           <button type="button" className="pill-button" onClick={() => onOpenBuilder(aminoAcid)}>
-            🧩 Construir estructura
+            🧩 Construir en 2D
+          </button>
+        )}
+        {onOpenBuilder3D && (
+          <button type="button" className="pill-button" onClick={() => onOpenBuilder3D(aminoAcid)}>
+            🔮 Construir en 3D
           </button>
         )}
       </div>

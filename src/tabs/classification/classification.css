@@ -1236,4 +1236,146 @@
   font-weight: 900;
 }
 
+/* ---------- Constructor 3D de cadenas laterales ---------- */
+
+.target-spec-panel {
+  border-left: 6px solid var(--color-primary);
+}
+
+.target-spec-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.target-spec-header h3 {
+  margin: 4px 0;
+}
+
+.trait-checklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trait-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #faf7ff;
+  border: 2px solid var(--color-primary-soft);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.trait-item--ok {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+}
+
+.trait-item--wrong {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.trait-item__icon {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.trait-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.trait-item__actual {
+  font-size: 0.82rem;
+}
+
+.trait-item--wrong del {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  font-weight: 700;
+}
+
+.sidechain-3d-palette {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 440px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.sidechain-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px;
+  border: 2px solid var(--color-primary-soft);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.sidechain-tile:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-primary);
+}
+
+.sidechain-tile--correct {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+.sidechain-tile--wrong {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.sidechain-tile__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 6px;
+}
+
+.sidechain-tile__formula {
+  font-weight: 800;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+}
+
+.sidechain-tile__geom {
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.sidechain-tile__meta {
+  font-size: 0.74rem;
+  color: var(--color-muted);
+}
+
+
 

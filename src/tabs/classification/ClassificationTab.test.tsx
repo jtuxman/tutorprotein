@@ -99,6 +99,12 @@ describe('ClassificationTab', () => {
     fireEvent.click(screen.getByRole('button', { name: /Constructor 2D/ }))
     expect(screen.getByRole('heading', { name: 'Constructor de estructuras' })).toBeInTheDocument()
 
+    fireEvent.click(screen.getByRole('button', { name: /Constructor 3D/ }))
+    expect(screen.getByRole('heading', { name: 'Constructor 3D de cadenas laterales' })).toBeInTheDocument()
+    // Al inicio muestra las características buscadas y al elegir una cadena lateral incorrecta marca con tache
+    fireEvent.click(screen.getByRole('button', { name: /–CH₂– –CH₂– –CH₂– –CH₂– –NH₂/ }))
+    expect(screen.getAllByText(/Tache:/).length).toBeGreaterThan(0)
+
     fireEvent.click(screen.getByRole('button', { name: /Mutaciones \(BLOSUM62\)/ }))
     expect(screen.getByRole('heading', { name: /Simulador de mutaciones/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Anemia falciforme/ })).toBeInTheDocument()

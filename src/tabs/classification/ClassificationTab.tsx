@@ -7,10 +7,11 @@ import { FilterBar } from './FilterBar'
 import { MutationSimulator } from './MutationSimulator'
 import { PhSimulator } from './PhSimulator'
 import { StructureBuilder } from './StructureBuilder'
+import { StructureBuilder3D } from './StructureBuilder3D'
 import { EMPTY_FILTERS, applyFilters, toggle, type Filters } from './filters'
 import './classification.css'
 
-type Section = 'catalog' | 'ph' | 'builder' | 'mutations'
+type Section = 'catalog' | 'ph' | 'builder' | 'builder3d' | 'mutations'
 type CatalogView =
   | { kind: 'list' }
   | { kind: 'detail'; code: string }
@@ -55,6 +56,12 @@ export function ClassificationTab() {
     window.scrollTo?.({ top: 0 })
   }
 
+  const openBuilder3DFor = (aminoAcid: AminoAcid) => {
+    setToolAminoAcid(aminoAcid)
+    setSection('builder3d')
+    window.scrollTo?.({ top: 0 })
+  }
+
   const switchSection = (next: Section) => {
     setSection(next)
     if (next === 'catalog') setView({ kind: 'list' })
@@ -90,6 +97,14 @@ export function ClassificationTab() {
       <button
         type="button"
         className="chip"
+        aria-pressed={section === 'builder3d'}
+        onClick={() => switchSection('builder3d')}
+      >
+        🔮 Constructor 3D
+      </button>
+      <button
+        type="button"
+        className="chip"
         aria-pressed={section === 'mutations'}
         onClick={() => switchSection('mutations')}
       >
@@ -116,6 +131,15 @@ export function ClassificationTab() {
     )
   }
 
+  if (section === 'builder3d') {
+    return (
+      <div className="classification">
+        {subnav}
+        <StructureBuilder3D key={toolAminoAcid?.code3 ?? 'default'} initialAminoAcid={toolAminoAcid} />
+      </div>
+    )
+  }
+
   if (section === 'mutations') {
     return (
       <div className="classification">
@@ -138,6 +162,7 @@ export function ClassificationTab() {
             onCompare={compare}
             onOpenPhSimulator={openPhFor}
             onOpenBuilder={openBuilderFor}
+            onOpenBuilder3D={openBuilder3DFor}
           />
         </div>
       )

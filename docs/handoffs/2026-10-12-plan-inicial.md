@@ -83,9 +83,10 @@ Componente único en `src/components/MolViewer/`, con barra de herramientas. Cad
    - La nube de carga en 3D.
    - La **curva de titulación** dibujada, con pKa y pI marcados, y la posición actual del deslizador.
    - Preguntas integradas: "¿Qué carga tiene His a pH 5?", "¿A qué pH Asp es neutro en promedio?".
-2. **Constructor de estructuras**: dos modos:
-   - *Armar*: el núcleo (Cα, amino, carboxilo) está fijo; se arrastran fragmentos (CH2, CH3, OH, SH, anillo, COOH, NH2…) para construir la cadena lateral pedida. La app valida comparando con el SMILES.
+2. **Constructor de estructuras**:
+   - *Armar en 2D*: el núcleo (Cα, amino, carboxilo) está fijo; se arrastran fragmentos (CH2, CH3, OH, SH, anillo, COOH, NH2…) para construir la cadena lateral pedida. La app valida comparando con el SMILES. Incluye modo de reto a ciegas («¿Quién soy?»).
    - *Dibujar de memoria*: lienzo de dibujo simple; al terminar se muestra lado a lado con la estructura correcta y el usuario se autocalifica (no se exige reconocimiento automático).
+   - *Constructor 3D de cadenas laterales*: parte de la base 3D del aminoácido ($\mathrm{H_2N{-}C_\alpha H{-}COOH}$) en `MolViewer`, muestra en el cuadro del residuo solicitado las **características buscadas** (grupo de Lehninger, carga a pH 7, carácter hidrofóbico/polar, puentes de H, anillos/heteroátomos y arquitectura 3D) y permite elegir entre las cadenas laterales para formarlo en 3D. Al elegir una cadena lateral, evalúa propiedad por propiedad qué aporta esa cadena lateral marcando con **✅ acierto** las que coinciden y con **❌ tache** las características incorrectas.
 3. **Mnemotecnias y datos curiosos** en la ficha de cada aminoácido: truco para recordarlo (contenido original), origen del nombre, esencial o no, codones, dónde aparece en la vida real (ej. Trp y serotonina, Glu y sabor umami). Guardado en `src/data/trivia.ts`.
 4. **Simulador de mutaciones** (nivel aminoácido): elegir X → Y y ver comparación de tamaño, carga, polaridad, hidropatía, capacidad de puente de H y si ambos son intercambiables según una matriz de sustitución (BLOSUM62). Explicación del efecto probable. Casos reales precargados (ej. Glu→Val de la anemia falciforme).
 
@@ -193,6 +194,7 @@ Decisiones tomadas después de escribir este plan. El detalle de cada una está 
 | 2026-10-12 | 1 | **Hidrógenos ocultos por defecto** en `MolViewer`; se muestran con el interruptor "Mostrar hidrógenos". | Petición de José Manuel tras ver la Fase 1: la forma de la molécula se lee mejor. |
 | 2026-10-12 | 1 | **Etiquetas de átomo activadas por defecto** en `MolViewer` (nombres CCD en los átomos pesados). Con anti-spoiler siguen ocultas. | Petición de José Manuel tras ver la Fase 1. |
 | 2026-10-12 | 1 | **Explicación "¿Por qué se llaman así?" en cada grupo** de la vista de clasificación: bloque plegado por defecto, debajo de las tarjetas y dentro del recuadro del grupo, con texto original en `GROUPS[...].explanation` (`src/data/aminoacids.ts`). | Petición de José Manuel: la frase del encabezado del grupo era escueta. |
+| 2026-10-16 | 2 | **Constructor 3D de cadenas laterales** (`src/tabs/classification/StructureBuilder3D.tsx`, `src/data/sideChainTraits.ts`, prop `hideSideChain` en `MolViewer`): parte de la base 3D común ($\mathrm{H_2N{-}C_\alpha H{-}COOH}$), muestra en el cuadro de solicitud las características buscadas del residuo y, al elegir una cadena lateral para acoplarla en 3D, detalla qué propiedades proporciona marcando con ✅ las correctas y con ❌ tache las características incorrectas. | Petición de José Manuel para complementar el constructor 2D con un constructor 3D guiado por propiedades químicas. |
 
 Consecuencias para fases posteriores:
 - Los valores por defecto del visor son de todo el kit: las pestañas nuevas los heredan salvo que su handoff diga otra cosa. En quizzes (Fase 3 en adelante) las etiquetas quedan ocultas por la regla anti-spoiler, no por el valor por defecto.

@@ -5,6 +5,7 @@ Aquí viven **todos** los datos bioquímicos y didácticos de AminoLab; el resto
 - `aminoacids.ts` (Fase 1): los 20 aminoácidos (nombres, códigos, grupo de Lehninger, SMILES neutro, masa, pKa, pI, hidropatía, esencialidad, codones, `standard`, grupos ionizables y explicación de los grupos).
 - `trivia.ts` (Fase 2): mnemotecnia original, etimología y aplicaciones en la vida real/clínica para cada aminoácido.
 - `fragments.ts` (Fase 2): fragmentos químicos arrastrables y recetas de cadena lateral para el constructor 2D, validados contra el SMILES neutro.
+- `sideChainTraits.ts` (Fase 2): fórmulas condensadas, arquitectura 3D y evaluación característica por característica (✅/❌) de cada cadena lateral para el constructor 3D.
 - `blosum62.ts` (Fase 2): matriz de sustitución BLOSUM62, roles de puente de hidrógeno, análisis de mutaciones X → Y y casos clínicos precargados.
 - Más adelante: `words.ts` (ahorcado), `tours/` (recorridos guiados).
 

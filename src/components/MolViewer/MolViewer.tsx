@@ -11,7 +11,7 @@ import {
   type CloudResponse,
   type GridSpec,
 } from './chargeCloud'
-import { apolarMask, atomColors, type SceneAtom } from './coloring'
+import { apolarMask, atomColors, backboneMask, type SceneAtom } from './coloring'
 import { Legend } from './Legend'
 import { load3Dmol, type Lib3Dmol } from './load3Dmol'
 import { MEASURE_KINDS, measure, type MeasureKind, type Measurement } from './measure'
@@ -71,7 +71,7 @@ function releaseViewer(viewer: GLViewer, container: HTMLElement | null) {
 }
 
 export function MolViewer(props: MolViewerProps) {
-  const { molecule, pH = PHYSIOLOGICAL_PH, spoilerFree = false, toolbar = true, onStateChange } = props
+  const { molecule, pH = PHYSIOLOGICAL_PH, hideSideChain = false, spoilerFree = false, toolbar = true, onStateChange } = props
   const { representation, colorMode, surface, surfaceOpacity, showHydrogens, labels } = props
   const aminoAcid = molecule.aminoAcid
   const hasAminoAcid = Boolean(aminoAcid)
@@ -246,9 +246,15 @@ export function MolViewer(props: MolViewerProps) {
     const colors = atomColors(state.colorMode, scene.atoms, aminoAcid, pH)
     const colorfunc: ColorFunc = (atom) => colors[atom.index ?? 0]
     viewer.setStyle({}, representationStyle(state.representation, colorfunc))
+    if (hideSideChain) {
+      const backbone = backboneMask(scene.atoms)
+      scene.atoms.forEach((_, idx) => {
+        if (!backbone[idx]) viewer.setStyle({ index: idx }, {})
+      })
+    }
     if (!state.showHydrogens) viewer.setStyle({ elem: 'H' }, {})
     viewer.render()
-  }, [ready, viewer, scene, aminoAcid, pH, state.representation, state.colorMode, state.showHydrogens])
+  }, [ready, viewer, scene, aminoAcid, pH, hideSideChain, state.representation, state.colorMode, state.showHydrogens])
 
   // Etiquetas de átomo y medidas (se redibujan juntas: comparten capa de etiquetas y formas).
   useEffect(() => {
@@ -267,9 +273,11 @@ export function MolViewer(props: MolViewerProps) {
       })
 
     if (state.labels === 'atoms') {
-      for (const atom of scene.atoms) {
+      const backbone = hideSideChain ? backboneMask(scene.atoms) : null
+      scene.atoms.forEach((atom, idx) => {
+        if (backbone && !backbone[idx]) return
         if (atom.element !== 'H' && atom.name) label(atom.name, atom, '#000000')
-      }
+      })
     }
     for (const index of picks) {
       const { x, y, z } = scene.atoms[index]
@@ -294,7 +302,7 @@ export function MolViewer(props: MolViewerProps) {
       label(measurement.text, measurement.anchor, MEASURE_COLOR)
     }
     viewer.render()
-  }, [ready, viewer, scene, state.labels, picks, measurements])
+  }, [ready, viewer, scene, hideSideChain, state.labels, picks, measurements])
 
   // Superficies: nube de carga (pH 7) o hidrofobicidad por átomo.
   useEffect(() => {
