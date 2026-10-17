@@ -18,6 +18,7 @@ import type { MolViewerState } from './types'
 interface LegendProps {
   state: MolViewerState
   aminoAcid?: AminoAcid
+  pH?: number
 }
 
 const ELEMENT_NAMES: Record<string, string> = { C: 'Carbono', H: 'Hidrógeno', N: 'Nitrógeno', O: 'Oxígeno', S: 'Azufre' }
@@ -45,7 +46,7 @@ export function GradientBar({ colors, fraction, min, max }: { colors: string[]; 
   )
 }
 
-function ColorLegend({ state, aminoAcid }: LegendProps) {
+function ColorLegend({ state, aminoAcid, pH = PHYSIOLOGICAL_PH }: LegendProps) {
   if (state.colorMode === 'element' || !aminoAcid) {
     return (
       <>
@@ -109,7 +110,9 @@ function ColorLegend({ state, aminoAcid }: LegendProps) {
       return (
         <>
           <GradientBar colors={[NEGATIVE_COLOR, ZERO_CHARGE_COLOR, POSITIVE_COLOR]} min="−1" max="+1" />
-          <span>Carga neta a pH 7: {formatSigned(netCharge(aminoAcid, PHYSIOLOGICAL_PH), 2)}</span>
+          <span>
+            Carga neta a pH {Number.isInteger(pH) ? pH : pH.toFixed(1)}: {formatSigned(netCharge(aminoAcid, pH), 2)}
+          </span>
           <span className="mol-legend__note">{NEUTRAL_STRUCTURE_NOTICE}</span>
         </>
       )

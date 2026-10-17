@@ -24,6 +24,8 @@ export interface MolViewerState {
 
 export interface MolViewerProps extends Partial<MolViewerState> {
   molecule: Molecule
+  /** pH al que se calculan el color por carga y la nube (por defecto 7). */
+  pH?: number
   /** Regla anti-spoiler: desactiva colores, superficies y etiquetas que delaten la respuesta. */
   spoilerFree?: boolean
   /** Muestra la barra de herramientas del kit (por defecto, sí). */

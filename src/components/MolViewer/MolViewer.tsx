@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AtomSpec, GLViewer } from '3dmol'
+import { PHYSIOLOGICAL_PH } from '../../chem/charge'
 import { ccdCode } from '../../data/aminoacids'
 import {
   CLOUD_SCALE,
@@ -24,7 +25,7 @@ import './MolViewer.css'
 type ColorFunc = (atom: AtomSpec) => string
 
 interface Cloud {
-  url: string
+  key: string
   spec: GridSpec
   data: Float32Array
 }
@@ -70,7 +71,7 @@ function releaseViewer(viewer: GLViewer, container: HTMLElement | null) {
 }
 
 export function MolViewer(props: MolViewerProps) {
-  const { molecule, spoilerFree = false, toolbar = true, onStateChange } = props
+  const { molecule, pH = PHYSIOLOGICAL_PH, spoilerFree = false, toolbar = true, onStateChange } = props
   const { representation, colorMode, surface, surfaceOpacity, showHydrogens, labels } = props
   const aminoAcid = molecule.aminoAcid
   const hasAminoAcid = Boolean(aminoAcid)
@@ -166,12 +167,12 @@ export function MolViewer(props: MolViewerProps) {
     }
   }, [])
 
-  /** Rejilla de potencial de la molécula actual; se calcula una vez, en un Web Worker. */
-  const requestCloud = useCallback((current: Scene, charges: number[]): Promise<Cloud> => {
+  /** Rejilla de potencial de la molécula actual; se calcula en un Web Worker. */
+  const requestCloud = useCallback((current: Scene, charges: number[], key: string): Promise<Cloud> => {
     const cached = cloudRef.current
-    if (cached?.url === current.url) return Promise.resolve(cached)
+    if (cached?.key === key) return Promise.resolve(cached)
     const spec = gridSpecFor(current.atoms)
-    const finish = (data: Float32Array) => (cloudRef.current = { url: current.url, spec, data })
+    const finish = (data: Float32Array) => (cloudRef.current = { key, spec, data })
     if (typeof Worker === 'undefined') {
       return Promise.resolve(finish(computePotentialGrid(current.atoms, charges, spec)))
     }
@@ -242,12 +243,12 @@ export function MolViewer(props: MolViewerProps) {
   // Representación, colores e hidrógenos.
   useEffect(() => {
     if (!ready || !viewer || !scene) return
-    const colors = atomColors(state.colorMode, scene.atoms, aminoAcid)
+    const colors = atomColors(state.colorMode, scene.atoms, aminoAcid, pH)
     const colorfunc: ColorFunc = (atom) => colors[atom.index ?? 0]
     viewer.setStyle({}, representationStyle(state.representation, colorfunc))
     if (!state.showHydrogens) viewer.setStyle({ elem: 'H' }, {})
     viewer.render()
-  }, [ready, viewer, scene, aminoAcid, state.representation, state.colorMode, state.showHydrogens])
+  }, [ready, viewer, scene, aminoAcid, pH, state.representation, state.colorMode, state.showHydrogens])
 
   // Etiquetas de átomo y medidas (se redibujan juntas: comparten capa de etiquetas y formas).
   useEffect(() => {
@@ -313,8 +314,12 @@ export function MolViewer(props: MolViewerProps) {
       const apolar = apolarMask(scene.atoms)
       add({ colorfunc: (atom: AtomSpec) => (apolar[atom.index ?? 0] ? HYDROPHOBIC_COLOR : HYDROPHILIC_COLOR) })
     } else {
-      const charges = atomCharges(aminoAcid, scene.atoms.map((atom) => atom.name))
-      requestCloud(scene, charges)
+      const charges = atomCharges(
+        aminoAcid,
+        scene.atoms.map((atom) => atom.name),
+        pH,
+      )
+      requestCloud(scene, charges, `${scene.url}@${pH.toFixed(2)}`)
         .then((cloud) => {
           const voldata = new lib.VolumeData('', 'none')
           const [x, y, z] = cloud.spec.origin
@@ -338,7 +343,7 @@ export function MolViewer(props: MolViewerProps) {
         })
       }
     }
-  }, [ready, viewer, scene, aminoAcid, state.surface, state.surfaceOpacity, requestCloud])
+  }, [ready, viewer, scene, aminoAcid, pH, state.surface, state.surfaceOpacity, requestCloud])
 
   const reset = () => {
     if (!viewer || !scene) return
@@ -393,7 +398,7 @@ export function MolViewer(props: MolViewerProps) {
           </div>
         )}
       </div>
-      {!spoilerFree && <Legend state={state} aminoAcid={aminoAcid} />}
+      {!spoilerFree && <Legend state={state} aminoAcid={aminoAcid} pH={pH} />}
     </div>
   )
 }

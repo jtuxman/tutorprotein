@@ -75,14 +75,19 @@ export function sideChainColor(mode: ColorMode, aminoAcid: AminoAcid): string {
 }
 
 /** Un color `#rrggbb` por átomo, en el orden de `atoms`. */
-export function atomColors(mode: ColorMode, atoms: SceneAtom[], aminoAcid?: AminoAcid): string[] {
+export function atomColors(
+  mode: ColorMode,
+  atoms: SceneAtom[],
+  aminoAcid?: AminoAcid,
+  pH = PHYSIOLOGICAL_PH,
+): string[] {
   if (mode === 'element' || !aminoAcid) return atoms.map((atom) => elementColor(atom.element))
 
   if (mode === 'charge') {
-    // Cada átomo de un grupo ionizable toma el color de la carga del grupo a pH 7.
+    // Cada átomo de un grupo ionizable toma el color de la carga del grupo al pH indicado.
     const charges = new Map<string, number>()
     for (const group of aminoAcid.ionizableGroups) {
-      const charge = groupCharge(group, PHYSIOLOGICAL_PH)
+      const charge = groupCharge(group, pH)
       for (const atom of group.atoms) charges.set(atom, charge)
     }
     return atoms.map((atom) => {
