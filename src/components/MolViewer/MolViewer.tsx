@@ -304,7 +304,7 @@ export function MolViewer(props: MolViewerProps) {
           viewer.removeAllSurfaces()
           viewer.removeAllLabels()
           viewer.removeAllShapes()
-          const atoms = viewer.addModel(pdbData, 'pdb').selectedAtoms({})
+          const atoms = viewer.addModel(pdbData, 'pdb', { keepH: true }).selectedAtoms({})
           const sceneAtoms = atoms.map((atom) => ({
             name: atom.atom ?? '',
             element: atom.elem ?? '',
@@ -440,6 +440,18 @@ export function MolViewer(props: MolViewerProps) {
           )
           viewer.zoomTo({ chain: selChain, resi: selResi })
         }
+
+        // Si la representación está en Cintas (cartoon) y se activa «Mostrar hidrógenos»,
+        // dibujar también los hidrógenos en varillas/esferas para que sean visibles.
+        if (state.showHydrogens && state.representation === 'cartoon') {
+          viewer.setStyle(
+            { elem: 'H' },
+            {
+              stick: { radius: 0.14, color: '#ffffff' },
+              sphere: { scale: 0.24, color: '#ffffff' },
+            },
+          )
+        }
       }
 
       if (!state.showHydrogens) viewer.setStyle({ elem: 'H' }, {})
@@ -544,6 +556,13 @@ export function MolViewer(props: MolViewerProps) {
         const ca = res?.atoms.find((a) => a.name === 'CA') ?? res?.atoms[0]
         if (res && ca) {
           label(`${res.aminoAcid.code3} ${res.resSeq} (${res.chain})`, ca, '#7c3aed')
+        }
+        if (res && state.labels === 'atoms') {
+          for (const atom of res.atoms) {
+            if (atom.element !== 'H' && atom.name && atom.name !== 'CA') {
+              label(atom.name, atom, '#000000')
+            }
+          }
         }
       }
     } else if (state.labels === 'atoms') {

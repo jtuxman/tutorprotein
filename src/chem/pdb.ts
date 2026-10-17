@@ -126,8 +126,128 @@ interface SsRange {
 function deduceElement(atomName: string, explicitElement: string): string {
   const clean = explicitElement.trim().toUpperCase()
   if (clean) return clean
-  const letters = atomName.replace(/[^A-Za-z]/g, '').toUpperCase()
-  return letters.slice(0, 1) || 'C'
+  // En PDB antiguos los hidrógenos pueden empezar con dígito, p. ej. 1HB, 2HG
+  const withoutDigits = atomName.replace(/^[0-9]+/, '').trim().toUpperCase()
+  if (withoutDigits.startsWith('H')) return 'H'
+  return withoutDigits.slice(0, 1) || 'C'
+}
+
+function formatPdbAtomLine(
+  serial: number,
+  atomName: string,
+  resName: string,
+  chain: string,
+  resSeq: number,
+  x: number,
+  y: number,
+  z: number,
+): string {
+  const ser = String(serial % 100000).padStart(5, ' ')
+  const nameField = atomName.length < 4 ? ` ${atomName.padEnd(3, ' ')}` : atomName.slice(0, 4)
+  const res = resName.padStart(3, ' ')
+  const ch = (chain || 'A').slice(0, 1)
+  const seq = String(resSeq).padStart(4, ' ')
+  const xf = x.toFixed(3).padStart(8, ' ')
+  const yf = y.toFixed(3).padStart(8, ' ')
+  const zf = z.toFixed(3).padStart(8, ' ')
+  return `ATOM  ${ser} ${nameField} ${res} ${ch}${seq}    ${xf}${yf}${zf}  1.00 15.00           H  `
+}
+
+/**
+ * Si una estructura PDB (p. ej. cristalografía de rayos X) no incluye átomos de
+ * hidrógeno, genera hidrógenos geométricos ideales a 1.02–1.09 Å sobre el
+ * esqueleto y átomos pesados de cada residuo para que «Mostrar hidrógenos»
+ * funcione en cualquier proteína.
+ */
+function synthesizeMissingHydrogens(residues: ProteinResidue[], startSerial: number): string[] {
+  const lines: string[] = []
+  let serial = startSerial
+
+  const unitOutward = (center: { x: number; y: number; z: number }, neighbors: { x: number; y: number; z: number }[]) => {
+    let vx = 0
+    let vy = 0
+    let vz = 0
+    for (const nb of neighbors) {
+      const dx = center.x - nb.x
+      const dy = center.y - nb.y
+      const dz = center.z - nb.z
+      const len = Math.hypot(dx, dy, dz) || 1
+      vx += dx / len
+      vy += dy / len
+      vz += dz / len
+    }
+    const norm = Math.hypot(vx, vy, vz)
+    if (norm < 1e-3) return { x: 0, y: 0, z: 1 }
+    return { x: vx / norm, y: vy / norm, z: vz / norm }
+  }
+
+  for (let i = 0; i < residues.length; i++) {
+    const res = residues[i]
+    const heavy = res.atoms.filter((a) => a.element !== 'H')
+    const nAtom = heavy.find((a) => a.name === 'N')
+    const caAtom = heavy.find((a) => a.name === 'CA')
+    const cAtom = heavy.find((a) => a.name === 'C')
+    const cbAtom = heavy.find((a) => a.name === 'CB')
+
+    // Hidrógeno amida H sobre N (excepto Pro)
+    if (nAtom && caAtom && res.resName !== 'PRO') {
+      const prevC = i > 0 && residues[i - 1].chain === res.chain ? residues[i - 1].atoms.find((a) => a.name === 'C') : undefined
+      const dir = unitOutward(nAtom, prevC ? [caAtom, prevC] : [caAtom])
+      lines.push(
+        formatPdbAtomLine(++serial, 'H', res.resName, res.chain, res.resSeq, nAtom.x + dir.x * 1.01, nAtom.y + dir.y * 1.01, nAtom.z + dir.z * 1.01),
+      )
+    }
+
+    // Hidrógeno HA sobre CA
+    if (caAtom && nAtom && cAtom) {
+      const neighbors = cbAtom ? [nAtom, cAtom, cbAtom] : [nAtom, cAtom]
+      const dir = unitOutward(caAtom, neighbors)
+      lines.push(
+        formatPdbAtomLine(++serial, 'HA', res.resName, res.chain, res.resSeq, caAtom.x + dir.x * 1.09, caAtom.y + dir.y * 1.09, caAtom.z + dir.z * 1.09),
+      )
+    }
+
+    // Hidrógenos representativos de átomos de la cadena lateral (C, N, O, S protonados)
+    const sideHeavy = heavy.filter((a) => !['N', 'CA', 'C', 'O', 'OXT'].includes(a.name))
+    for (const atom of sideHeavy) {
+      // Carbonos carbonílicos/guanidinio sin H o carboxilatos desprotonados
+      if (
+        (res.resName === 'ASP' && (atom.name === 'CG' || atom.name === 'OD1' || atom.name === 'OD2')) ||
+        (res.resName === 'GLU' && (atom.name === 'CD' || atom.name === 'OE1' || atom.name === 'OE2')) ||
+        (res.resName === 'ASN' && (atom.name === 'CG' || atom.name === 'OD1')) ||
+        (res.resName === 'GLN' && (atom.name === 'CD' || atom.name === 'OE1')) ||
+        (res.resName === 'ARG' && atom.name === 'CZ') ||
+        (res.resName === 'TYR' && (atom.name === 'CG' || atom.name === 'CZ')) ||
+        (res.resName === 'PHE' && atom.name === 'CG') ||
+        (res.resName === 'TRP' && (atom.name === 'CG' || atom.name === 'CD2' || atom.name === 'CE2')) ||
+        (res.resName === 'HIS' && atom.name === 'CG')
+      ) {
+        continue
+      }
+      // Si es Cys en puente disulfuro, su SG ya no tiene hidrógeno tiol
+      if (res.resName === 'CYS' && atom.name === 'SG' && res.disulfidePartner) continue
+
+      const bonded = heavy.filter((other) => other !== atom && distance(atom, other) <= 1.9)
+      if (bonded.length === 0) continue
+      const dir = unitOutward(atom, bonded)
+      const bondLen = atom.element === 'C' ? 1.09 : atom.element === 'S' ? 1.34 : 1.01
+      const hName = `H${atom.name.slice(1, 3) || 'B'}`
+      lines.push(
+        formatPdbAtomLine(
+          ++serial,
+          hName,
+          res.resName,
+          res.chain,
+          res.resSeq,
+          atom.x + dir.x * bondLen,
+          atom.y + dir.y * bondLen,
+          atom.z + dir.z * bondLen,
+        ),
+      )
+    }
+  }
+
+  return lines
 }
 
 export function residueKey(chain: string, resSeq: number): string {
@@ -395,6 +515,16 @@ export function parsePdb(rawPdb: string, fallbackId = 'PDB'): ParsedProtein {
   const rawTitle = titleParts.join(' ').replace(/\s+/g, ' ').trim()
   const title = rawTitle ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1).toLowerCase() : `Estructura ${id}`
 
+  // Recortar al primer modelo si había ENDMDL y añadir hidrógenos geométricos si el PDB no traía ninguno
+  const endmdlIdx = lines.findIndex((l) => l.slice(0, 6).trim() === 'ENDMDL')
+  const singleModelLines = (endmdlIdx >= 0 ? lines.slice(0, endmdlIdx) : lines).filter(
+    (l) => l.slice(0, 6).trim() !== 'END',
+  )
+  const hasAnyHydrogen = atoms.some((a) => a.element === 'H')
+  const maxSerial = atoms.reduce((m, a) => Math.max(m, a.serial), 0)
+  const extraH = hasAnyHydrogen ? [] : synthesizeMissingHydrogens(residues, maxSerial + 1)
+  const effectivePdb = [...singleModelLines, ...extraH, 'END'].join('\n')
+
   return {
     id,
     title,
@@ -403,7 +533,7 @@ export function parsePdb(rawPdb: string, fallbackId = 'PDB'): ParsedProtein {
     ligandNames: Array.from(ligandNamesSet),
     disulfides,
     saltBridges,
-    rawPdb,
+    rawPdb: effectivePdb,
   }
 }
 
