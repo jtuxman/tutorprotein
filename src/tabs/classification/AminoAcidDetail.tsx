@@ -1,7 +1,8 @@
 import { MolViewer, aminoAcidMolecule } from '../../components/MolViewer'
 import { Structure2D } from '../../components/Structure2D'
 import { AMINO_ACIDS, GROUPS, type AminoAcid } from '../../data/aminoacids'
-import { GroupBadge, PROPERTIES } from './properties'
+import { GroupBadge } from './GroupBadge'
+import { PROPERTIES } from './properties'
 
 interface AminoAcidDetailProps {
   aminoAcid: AminoAcid

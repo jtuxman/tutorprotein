@@ -2,9 +2,10 @@
 
 import type { ReactNode } from 'react'
 import { PHYSIOLOGICAL_PH, chargeSign, netCharge } from '../../chem/charge'
-import { HYDROPHILIC_COLOR, HYDROPHOBIC_COLOR, ZERO_CHARGE_COLOR } from '../../components/MolViewer/palette'
-import { ESSENTIALITY_LABELS, GROUPS, HYDROPATHY_RANGE, type AminoAcid } from '../../data/aminoacids'
+import { ESSENTIALITY_LABELS, GROUPS, type AminoAcid } from '../../data/aminoacids'
 import { formatSigned } from '../../format'
+import { GroupBadge } from './GroupBadge'
+import { HydropathyBar } from './HydropathyBar'
 
 export interface Property {
   id: string
@@ -16,35 +17,6 @@ export interface Property {
 }
 
 const CHARGE_WORDS = { positive: 'positiva', negative: 'negativa', neutral: 'neutra' }
-
-export function GroupBadge({ aminoAcid }: { aminoAcid: AminoAcid }) {
-  const group = GROUPS[aminoAcid.group]
-  return (
-    <span className="group-badge" style={{ '--group-color': `var(${group.cssVar})` } as React.CSSProperties}>
-      {group.label}
-    </span>
-  )
-}
-
-function HydropathyBar({ value }: { value: number }) {
-  const fraction = (value - HYDROPATHY_RANGE.min) / (HYDROPATHY_RANGE.max - HYDROPATHY_RANGE.min)
-  return (
-    <span className="hydropathy">
-      <strong>{formatSigned(value, 1)}</strong>
-      <span className="hydropathy__scale">
-        <span className="hydropathy__end">{formatSigned(HYDROPATHY_RANGE.min, 1)}</span>
-        <span
-          className="hydropathy__bar"
-          style={{ background: `linear-gradient(90deg, ${HYDROPHILIC_COLOR}, ${ZERO_CHARGE_COLOR}, ${HYDROPHOBIC_COLOR})` }}
-          aria-hidden="true"
-        >
-          <span className="hydropathy__marker" style={{ left: `${fraction * 100}%` }} />
-        </span>
-        <span className="hydropathy__end">{formatSigned(HYDROPATHY_RANGE.max, 1)}</span>
-      </span>
-    </span>
-  )
-}
 
 export const PROPERTIES: Property[] = [
   { id: 'name', label: 'Nombre', text: (aa) => aa.name },

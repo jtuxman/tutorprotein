@@ -91,8 +91,18 @@ export function MolViewer(props: MolViewerProps) {
   const cloudRef = useRef<Cloud | null>(null)
   const [viewer, setViewer] = useState<GLViewer | null>(null)
   const [scene, setScene] = useState<Scene | null>(null)
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
-  const ready = status === 'ready' && viewer !== null && scene?.url === molecule.url
+  const [viewerFailed, setViewerFailed] = useState(false)
+  const [structureFailed, setStructureFailed] = useState(false)
+  // Al cambiar de molécula se descarta el error anterior durante el render, sin otro efecto.
+  const url = molecule.url
+  const [trackedUrl, setTrackedUrl] = useState(url)
+  if (trackedUrl !== url) {
+    setTrackedUrl(url)
+    setStructureFailed(false)
+  }
+  const status: 'loading' | 'ready' | 'error' =
+    viewerFailed || structureFailed ? 'error' : viewer !== null && scene?.url === url ? 'ready' : 'loading'
+  const ready = status === 'ready'
 
   // Medidas: son del visor, no forman parte del estado compartido.
   const [measureKind, setMeasureKind] = useState<MeasureKind | null>(null)
@@ -145,7 +155,7 @@ export function MolViewer(props: MolViewerProps) {
         setViewer(created)
       })
       .catch(() => {
-        if (!cancelled) setStatus('error')
+        if (!cancelled) setViewerFailed(true)
       })
     return () => {
       cancelled = true
@@ -191,12 +201,10 @@ export function MolViewer(props: MolViewerProps) {
   }, [viewer])
 
   // Carga la molécula y asigna a cada átomo su nombre del CCD.
-  const url = molecule.url
   const ccd = aminoAcid ? ccdCode(aminoAcid) : null
   useEffect(() => {
     if (!viewer) return
     let cancelled = false
-    setStatus('loading')
     Promise.all([fetchStructure(url), ccd ? fetchAtomNames() : null])
       .then(([sdf, names]) => {
         if (cancelled) return
@@ -222,10 +230,9 @@ export function MolViewer(props: MolViewerProps) {
         setMeasurements([])
         viewer.setClickable({}, true, (atom: AtomSpec) => pickRef.current(atom.index ?? -1))
         frame(viewer, sceneAtoms)
-        setStatus('ready')
       })
       .catch(() => {
-        if (!cancelled) setStatus('error')
+        if (!cancelled) setStructureFailed(true)
       })
     return () => {
       cancelled = true

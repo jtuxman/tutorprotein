@@ -49,7 +49,7 @@ export function ClassificationTab() {
   }
 
   return (
-    <div className="classification">
+    <div className={selected.length > 0 ? 'classification classification--comparing' : 'classification'}>
       <header className="classification__intro">
         <h2>Los 20 aminoácidos</h2>
         <p>

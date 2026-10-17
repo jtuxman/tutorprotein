@@ -1,7 +1,8 @@
 // Fuente única de datos de los aminoácidos de AminoLab.
 //
 // Valores numéricos (Mr, pK1, pK2, pKR, pI, índice de hidropatía): Nelson & Cox,
-// "Lehninger Principles of Biochemistry", 8.ª ed. (2021), Tabla 3-1. El índice de
+// "Lehninger Principles of Biochemistry", 8.ª ed. (2021), Tabla 3-1. Cotejados
+// valor por valor con esa tabla el 2026-10-16: coinciden. El índice de
 // hidropatía de esa tabla es la escala de Kyte & Doolittle (J. Mol. Biol. 157:105, 1982).
 // Clasificación en 5 grupos y esencialidad (humanos adultos): también Lehninger.
 // Codones: código genético estándar, en ARN.
