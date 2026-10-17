@@ -455,23 +455,21 @@ export function MolViewer(props: MolViewerProps) {
           }
         }
 
-        // El residuo seleccionado permanece siempre resaltado (enlaces más gruesos y color destacado)
+        // El residuo seleccionado permanece siempre resaltado (enlaces más gruesos y carbonos en gris neutro)
         if (selKey) {
           const [selChain, selResiText] = selKey.split(':')
           const selResi = Number(selResiText)
           viewer.setStyle(
             { chain: selChain, resi: selResi },
             {
-              cartoon: { color: '#f43f5e' },
+              cartoon: { color: '#94a3b8' },
               stick: {
                 radius: 0.28,
-                colorfunc: (atom: AtomSpec) =>
-                  (atom.elem ?? 'C') === 'C' ? '#fbbf24' : elementColor(atom.elem ?? 'C'),
+                colorfunc: (atom: AtomSpec) => elementColor(atom.elem ?? 'C'),
               },
               sphere: {
                 scale: 0.34,
-                colorfunc: (atom: AtomSpec) =>
-                  (atom.elem ?? 'C') === 'C' ? '#fbbf24' : elementColor(atom.elem ?? 'C'),
+                colorfunc: (atom: AtomSpec) => elementColor(atom.elem ?? 'C'),
               },
             },
           )
@@ -647,18 +645,18 @@ export function MolViewer(props: MolViewerProps) {
           }
         }
 
-        // El residuo seleccionado SIEMPRE muestra su nombre y un halo para distinguirse de los demás
+        // El residuo seleccionado SIEMPRE muestra su nombre y un halo gris neutro para distinguirse de los demás
         if (selKey) {
           const res = parsed.residues.find((r) => r.key === selKey)
           const ca = res?.atoms.find((a) => a.name === 'CA') ?? res?.atoms[0]
           if (res && ca) {
             viewer.addSphere({
               center: { x: ca.x, y: ca.y, z: ca.z },
-              radius: 0.9,
-              color: '#fbbf24',
-              opacity: 0.45,
+              radius: 0.85,
+              color: '#94a3b8',
+              opacity: 0.35,
             })
-            label(`★ ${res.aminoAcid.code3} ${res.resSeq} (${res.chain})`, ca, '#b45309')
+            label(`★ ${res.aminoAcid.code3} ${res.resSeq} (${res.chain})`, ca, '#475569')
           }
           if (res && state.labels === 'atoms') {
             for (const atom of res.atoms) {
